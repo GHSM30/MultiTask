@@ -4,15 +4,42 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 First, run the development server:
 
-```bash
+Para poder ejecutar el proyecto necesitan instalar varias cosas en consola:
+Primero que nada ya deben tener Node.js instalado en su computadora
+Instala Node.js y npm: [https://nodejs.org/](https://nodejs.org/).
+Una vez ya instalado Node.js y npm seguimos con estos pasos:
+
+1. Crea un nuevo proyecto Next.js:
+Abre una terminal en Visual Studio Code (Terminal > New Terminal) y ejecuta los siguientes comandos:
+
+npx create-next-app@latest multitask
+cd multitask
+
+Durante la configuración, selecciona las siguientes opciones:
+- Would you like to use TypeScript? › Yes
+- Would you like to use ESLint? › Yes
+- Would you like to use Tailwind CSS? › Yes
+- Would you like to use `src/` directory? › No
+- Would you like to use App Router? › Yes
+- Would you like to customize the default import alias? › No
+
+2. Instala las dependencias adicionales:
+En la terminal, ejecuta:
+npm install framer-motion lucide-react
+
+3. Configura shadcn/ui:
+Ejecuta los siguientes comandos:
+npx shadcn@latest init
+
+Sigue las instrucciones del asistente. Cuando te pregunte sobre el estilo, elige el que prefieras.
+
+4. Instala los componentes de shadcn/ui que estamos utilizando:
+npx shadcn@latest add button card input
+
+Con todas las dependencias instaladas ya deberia funcionar el proyecto.
+Inicia el servidor con:
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
