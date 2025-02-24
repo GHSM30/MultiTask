@@ -1,21 +1,38 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { motion } from "framer-motion"
-import { CheckSquare, Lock, User } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { CheckSquare, Lock, User } from "lucide-react";
+import Link from "next/link"; // Importa Link de Next.js para la navegación
 
 export default function LoginForm() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+
+    // Validación básica
+    if (!username || !password) {
+      setError("Por favor, completa todos los campos.");
+      return;
+    }
+
     // Aquí iría la lógica de autenticación
-    console.log("Iniciar sesión con:", username, password)
-  }
+    console.log("Iniciar sesión con:", username, password);
+
+    // Simulación de autenticación
+    if (username === "admin" && password === "admin") {
+      setError("");
+      alert("Inicio de sesión exitoso");
+    } else {
+      setError("Usuario o contraseña incorrectos.");
+    }
+  };
 
   const multiTaskIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12">
@@ -40,7 +57,7 @@ export default function LoginForm() {
         transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear", delay: 0.5 }}
       />
     </svg>
-  )
+  );
 
   return (
     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -83,16 +100,22 @@ export default function LoginForm() {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               </div>
             </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg"
+            >
+              Iniciar Sesión
+            </Button>
           </form>
         </CardContent>
-        <CardFooter>
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg"
-            onClick={handleSubmit}
-          >
-            Iniciar Sesión
-          </Button>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-gray-600">
+            ¿No tienes una cuenta?{" "}
+            <Link href="/dashboard/registro" className="text-cyan-600 hover:text-cyan-700 font-semibold">
+              Regístrate
+            </Link>
+          </p>
         </CardFooter>
         <div className="p-6 bg-gradient-to-r from-cyan-50 to-indigo-50">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">MultiTask te permite:</h3>
@@ -115,6 +138,5 @@ export default function LoginForm() {
         </div>
       </Card>
     </motion.div>
-  )
+  );
 }
-
