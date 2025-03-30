@@ -4,34 +4,86 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { CheckSquare, Lock, User } from "lucide-react";
-import Link from "next/link"; // Importa Link de Next.js para la navegación
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckSquare, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMutation, gql } from "@apollo/client";
+import { setCookie } from "@/lib/utils";
+import { ApolloError } from '@apollo/client';
+
+const LOGIN_MUTATION = gql`
+  mutation Login($email: String!, $password: String!) {
+    login(email: $email, password: $password) {
+      token
+      user {
+        id
+        email
+        firstName
+        lastName
+      }
+    }
+  }
+`;
 
 export default function LoginForm() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [login] = useMutation(LOGIN_MUTATION, {
+    onCompleted: (data) => {
+      if (data?.login?.token) {
+        setCookie("token", data.login.token, 7);
+        router.push("/dashboard/taskArea");
+      }
+    },
+    onError: (error: ApolloError) => {
+      const graphQLError = error.graphQLErrors?.[0];
+      
+      if (error.message.includes("credentials") || graphQLError?.extensions?.code === 'UNAUTHENTICATED') {
+        setError("Credenciales incorrectas");
+      } else {
+        setError("Error al iniciar sesión");
+      }
+      setIsLoading(false);
+    }
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validación básica
-    if (!username || !password) {
-      setError("Por favor, completa todos los campos.");
+    setError("");
+    
+    if (!formData.email || !formData.password) {
       return;
     }
 
-    // Aquí iría la lógica de autenticación
-    console.log("Iniciar sesión con:", username, password);
-
-    // Simulación de autenticación
-    if (username === "admin" && password === "admin") {
-      setError("");
-      alert("Inicio de sesión exitoso");
-    } else {
-      setError("Usuario o contraseña incorrectos.");
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return;
     }
+
+    setIsLoading(true);
+    await login({
+      variables: {
+        email: normalizedEmail,
+        password: formData.password
+      }
+    });
   };
 
   const multiTaskIcon = () => (
@@ -75,11 +127,11 @@ export default function LoginForm() {
             <div className="space-y-2">
               <div className="relative">
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Usuario"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Correo electrónico"
+                  value={formData.email}
+                  onChange={handleChange}
                   required
                   className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
@@ -90,24 +142,45 @@ export default function LoginForm() {
               <div className="relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={formData.password}
+                  onChange={handleChange}
                   required
-                  className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="pl-10 pr-10 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg disabled:opacity-70"
             >
-              Iniciar Sesión
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando sesión...
+                </div>
+              ) : (
+                "Iniciar Sesión"
+              )}
             </Button>
           </form>
+          {/* Mensaje de error minimalista */}
+          {error && (
+            <p className="text-center text-red-500 text-sm mt-2">
+              {error}
+            </p>
+          )}
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-600">

@@ -1,77 +1,153 @@
-"use client"; // Asegúrate de agregar esta línea
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion"; // Agregamos AnimatePresence
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMutation, gql } from "@apollo/client";
+import { Eye, EyeOff } from "lucide-react"; // Importamos los íconos de visibilidad
+
+const REGISTER_MUTATION = gql`
+  mutation RegisterUser(
+    $firstName: String!
+    $lastName: String!
+    $email: String!
+    $password: String!
+  ) {
+    register(
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      password: $password
+    ) {
+      id
+      email
+      firstName
+      lastName
+    }
+  }
+`;
 
 export default function RegisterForm() {
-  const [firstName, setFirstName] = useState(""); // Nombre
-  const [lastName, setLastName] = useState(""); // Apellido
-  const [email, setEmail] = useState(""); // Correo electrónico
-  const [password, setPassword] = useState(""); // Contraseña
-  const [confirmPassword, setConfirmPassword] = useState(""); // Confirmar contraseña
-  const [error, setError] = useState(""); // Mensaje de error
-  const [shake, setShake] = useState(false); // Estado para la animación de sacudida
-  const router = useRouter(); // Hook para redirigir
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: ""
+  });
+  const [error, setError] = useState("");
+  const [shake, setShake] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar contraseña
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Estado para mostrar confirmación
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-    // Validación: Campos vacíos
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      setError("Por favor, completa todos los campos.");
-      triggerShake(); // Activar animación de sacudida
-      return;
+  const [register, { loading }] = useMutation(REGISTER_MUTATION, {
+    onCompleted: (data) => {
+      console.log("Registro exitoso - Datos recibidos:", data);
+      if (data?.register) {
+        router.push("/dashboard/login");
+      }
+    },
+    onError: (error) => {
+      console.group("Error en el registro");
+      console.log("Error completo:", error);
+      console.log("GraphQL Errors:", error.graphQLErrors);
+      console.log("Network Error:", error.networkError);
+      console.groupEnd();
+  
+      const serverMessage = error.graphQLErrors?.[0]?.message || 
+                         "Error al procesar el registro";
+      
+      setError(serverMessage);
+      triggerShake();
     }
+  });
 
-    // Validación: Contraseñas coinciden
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden.");
-      triggerShake(); // Activar animación de sacudida
-      return;
-    }
-
-    // Validación: Correo electrónico
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Por favor, ingresa un correo electrónico válido.");
-      triggerShake(); // Activar animación de sacudida
-      return;
-    }
-
-    // Validación: Contraseña segura (8 caracteres, números y mayúsculas)
-    const passwordRegex = /^(?=.*\d)(?=.*[A-Z]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      setError("La contraseña debe tener al menos 8 caracteres, incluir números y mayúsculas.");
-      triggerShake(); // Activar animación de sacudida
-      return;
-    }
-
-    // Si todo está bien, proceder con el registro
-    setError(""); // Limpiar errores
-    console.log("Registrarse con:", { firstName, lastName, email, password });
-
-    // Simulación de registro exitoso
-    alert("Registro exitoso. Redirigiendo al inicio de sesión...");
-
-    // Redirigir al usuario a la página de inicio de sesión
-    router.push("/dashboard/login");
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
   };
 
-  // Función para activar la animación de sacudida
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!formData.firstName || !formData.lastName || !formData.email || 
+        !formData.password || !formData.confirmPassword) {
+      setError("Por favor, completa todos los campos.");
+      triggerShake();
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      triggerShake();
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Por favor, ingresa un correo electrónico válido.");
+      triggerShake();
+      return;
+    }
+
+    const passwordRegex = /^(?=.*\d)(?=.*[A-Z]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError("La contraseña debe tener al menos 8 caracteres, incluir números y mayúsculas.");
+      triggerShake();
+      return;
+    }
+
+    try {
+      console.log("Intentando registrar:", formData);
+      const result = await register({
+        variables: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password
+        }
+      });
+      console.log("Resultado del registro:", result);
+    } catch (err) {
+      console.error("Error en el registro:", err);
+    }
+  };
+
   const triggerShake = () => {
     setShake(true);
-    setTimeout(() => setShake(false), 500); // Desactivar la animación después de 500ms
+    setTimeout(() => setShake(false), 500);
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <motion.div
-        animate={{ x: shake ? [0, -10, 10, -10, 10, 0] : 0 }} // Animación de sacudida
+        animate={{ x: shake ? [0, -10, 10, -10, 10, 0] : 0 }}
         transition={{ duration: 0.5 }}
       >
         <Card className="w-full max-w-md overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl">
@@ -84,72 +160,90 @@ export default function RegisterForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Campo: Nombre */}
               <div className="space-y-2">
                 <Input
                   id="firstName"
                   type="text"
                   placeholder="Nombre"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  value={formData.firstName}
+                  onChange={handleChange}
                   required
                   className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Campo: Apellido */}
               <div className="space-y-2">
                 <Input
                   id="lastName"
                   type="text"
                   placeholder="Apellido"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  value={formData.lastName}
+                  onChange={handleChange}
                   required
                   className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Campo: Correo electrónico */}
               <div className="space-y-2">
                 <Input
                   id="email"
                   type="email"
                   placeholder="Correo electrónico"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={formData.email}
+                  onChange={handleChange}
                   required
                   className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Campo: Contraseña */}
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={formData.password}
+                  onChange={handleChange}
                   required
-                  className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="pl-10 pr-10 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
 
-              {/* Campo: Confirmar contraseña */}
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirmar contraseña"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
                   required
-                  className="pl-10 pr-4 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="pl-10 pr-10 py-3 border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
+                <button
+                  type="button"
+                  onClick={toggleConfirmPasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
 
-              {/* Mostrar mensaje de error */}
               <AnimatePresence>
                 {error && (
                   <motion.p
@@ -163,12 +257,12 @@ export default function RegisterForm() {
                 )}
               </AnimatePresence>
 
-              {/* Botón de registro */}
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg disabled:opacity-70"
               >
-                Registrarse
+                {loading ? "Registrando..." : "Registrarse"}
               </Button>
             </form>
           </CardContent>

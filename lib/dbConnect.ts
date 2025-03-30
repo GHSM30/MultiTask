@@ -1,46 +1,67 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 
-// Extiende la interfaz global para incluir `mongoose`
-declare global {
-  var mongoose: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-  };
+// 1. Define una interfaz explícita para el objeto cacheado
+interface MongooseCache {
+  conn: Mongoose | null;
+  promise: Promise<Mongoose> | null;
 }
 
-const MONGODB_URI = process.env.MONGODB_URI;
+// 2. Extiende la interfaz global con tipos más específicos
+declare global {
+  var mongoose: MongooseCache;
+}
+
+// 3. Validación más estricta de la variable de entorno
+const MONGODB_URI = process.env.MONGODB_URI as string;
 
 if (!MONGODB_URI) {
-  throw new Error("Por favor define la variable MONGODB_URI en .env.local");
+  throw new Error(
+    "Por favor define la variable MONGODB_URI en .env.local como una cadena de conexión válida"
+  );
 }
+
+// 4. Inicialización del caché con tipos explícitos
+let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
 /**
- * Conexión global a MongoDB para evitar múltiples conexiones en desarrollo.
+ * Conexión global a MongoDB con manejo mejorado de tipos y errores
  */
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-async function dbConnect(): Promise<typeof mongoose> {
+async function dbConnect(): Promise<Mongoose> {
+  // 5. Retorna conexión existente si está disponible
   if (cached.conn) {
     return cached.conn;
   }
 
+  // 6. Crea una nueva conexión si no hay una promesa pendiente
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => {
-      return mongoose;
-    });
+    const opts = {
+      bufferCommands: false, // Deshabilita el buffering de comandos
+      serverSelectionTimeoutMS: 5000, // Tiempo de espera para selección de servidor
+      socketTimeoutMS: 45000, // Cierra sockets después de 45s de inactividad
+    };
+
+    cached.promise = mongoose
+      .connect(MONGODB_URI, opts)
+      .then((mongooseInstance) => {
+        console.log("Conexión a MongoDB establecida correctamente");
+        return mongooseInstance;
+      })
+      .catch((error) => {
+        console.error("Error al conectar a MongoDB:", error);
+        cached.promise = null; // Resetea la promesa en caso de error
+        throw error;
+      });
   }
 
+  // 7. Espera la conexión y maneja errores
   try {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
-    throw error;
+    throw new Error(`Error en la conexión a MongoDB: ${error instanceof Error ? error.message : String(error)}`);
   }
 
+  // 8. Retorna la conexión establecida
   return cached.conn;
 }
 
