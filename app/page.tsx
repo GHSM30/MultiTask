@@ -1,4 +1,11 @@
 "use client";
+//npm install @apollo/client graphql
+//npm install @apollo/client graphql apollo-server-micro @graphql-tools/schema bcryptjs
+//npm install -D @types/bcryptjs
+//npm install @apollo/client@latest graphql@latest
+//npm list @apollo/client graphql apollo-server-micro
+//npm install bcryptjs jsonwebtoken
+//npm install -D @types/bcryptjs @types/jsonwebtoken
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
