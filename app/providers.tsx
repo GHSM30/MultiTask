@@ -3,6 +3,7 @@
 import { ApolloClient, ApolloProvider, InMemoryCache, HttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { ReactNode } from 'react';
+import { SessionProvider } from "next-auth/react";
 
 const httpLink = new HttpLink({
   uri: '/api/graphql',
@@ -27,10 +28,13 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-export function Providers({ children }: { children: ReactNode }) {
+// Asegúrate que esta sea la exportación por defecto
+export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <ApolloProvider client={client}>
-      {children}
-    </ApolloProvider>
+    <SessionProvider>
+      <ApolloProvider client={client}>
+        {children}
+      </ApolloProvider>
+    </SessionProvider>
   );
 }

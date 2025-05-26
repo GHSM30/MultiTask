@@ -4,13 +4,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion} from "framer-motion";
 import { CheckSquare, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, gql } from "@apollo/client";
 import { setCookie } from "@/lib/utils";
 import { ApolloError } from '@apollo/client';
+
 
 const LOGIN_MUTATION = gql`
   mutation Login($email: String!, $password: String!) {
@@ -37,23 +38,47 @@ export default function LoginForm() {
   const router = useRouter();
 
   const [login] = useMutation(LOGIN_MUTATION, {
-    onCompleted: (data) => {
-      if (data?.login?.token) {
-        setCookie("token", data.login.token, 7);
+  onCompleted: async (data) => {
+    if (data?.login?.user) {
+      try {
+        const response = await fetch('/api/generate-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user: {
+              id: data.login.user.id,
+              email: data.login.user.email
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al generar token');
+        }
+
+        const { token } = await response.json();
+        setCookie("token", token, 7);
         router.push("/dashboard/taskArea");
-      }
-    },
-    onError: (error: ApolloError) => {
-      const graphQLError = error.graphQLErrors?.[0];
-      
-      if (error.message.includes("credentials") || graphQLError?.extensions?.code === 'UNAUTHENTICATED') {
-        setError("Credenciales incorrectas");
-      } else {
+      } catch (error) {
+        console.error('Error:', error);
         setError("Error al iniciar sesión");
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
-  });
+  },
+  onError: (error: ApolloError) => {
+    const graphQLError = error.graphQLErrors?.[0];
+    
+    if (error.message.includes("credentials") || graphQLError?.extensions?.code === 'UNAUTHENTICATED') {
+      setError("Credenciales incorrectas");
+    } else {
+      setError("Error al iniciar sesión");
+    }
+    setIsLoading(false);
+  }
+});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
