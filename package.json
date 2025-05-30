@@ -11,6 +11,8 @@
   "dependencies": {
     "@apollo/client": "^3.13.5",
     "@graphql-tools/schema": "^10.0.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-slot": "^1.1.2",
     "@types/date-fns": "^2.6.3",
     "@types/next-auth": "^3.15.0",

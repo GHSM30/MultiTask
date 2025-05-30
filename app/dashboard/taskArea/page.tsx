@@ -4,11 +4,40 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, Bot, ListChecks, Send, Loader2, User, Calendar, Flag, ChevronDown, Plus } from "lucide-react";
+import {
+  Sparkles,
+  Bot,
+  ListChecks,
+  Send,
+  Loader2,
+  User,
+  Calendar,
+  Flag,
+  ChevronDown,
+  Plus,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getToken } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+
+/*
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
+*/
 
 type Task = {
   id: string;
@@ -30,23 +59,28 @@ type Message = {
 export default function TaskArea() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "todo" | "in-progress" | "done">("all");
+  const [activeTab, setActiveTab] = useState<
+    "all" | "todo" | "in-progress" | "done"
+  >("all");
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "¡Hola! Soy MultiTask AI, tu asistente inteligente para gestión de tareas. Puedo ayudarte a:",
+      content:
+        "¡Hola! Soy MultiTask AI, tu asistente inteligente para gestión de tareas. Puedo ayudarte a:",
       role: "assistant",
     },
     {
       id: "2",
-      content: "📝 Crear tareas con nombre, prioridad y fecha límite\n🔄 Modificar tareas existentes\n✅ Marcar tareas como completadas\n🗓️ Mostrar tus tareas pendientes\n🔍 Buscar tareas específicas",
+      content:
+        "📝 Crear tareas con nombre, prioridad y fecha límite\n🔄 Modificar tareas existentes\n✅ Marcar tareas como completadas\n🗓️ Mostrar tus tareas pendientes\n🔍 Buscar tareas específicas",
       role: "assistant",
     },
     {
       id: "3",
-      content: 'Prueba decir: "Crear tarea Revisar documentos con prioridad alta para el viernes"',
+      content:
+        'Prueba decir: "Crear tarea Revisar documentos con prioridad alta para el viernes"',
       role: "assistant",
-    }
+    },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -54,23 +88,28 @@ export default function TaskArea() {
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: "",
     priority: "medium",
-    status: "todo"
+    status: "todo",
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Función mejorada para manejar mensajes
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
-    
-    const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    const generateId = () =>
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
 
     const token = getToken();
     if (!token) {
-      setMessages(prev => [...prev, {
-        id: generateId(),
-        content: "⚠️ Necesitas iniciar sesión para usar el chat",
-        role: "assistant",
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          content: "⚠️ Necesitas iniciar sesión para usar el chat",
+          role: "assistant",
+        },
+      ]);
       return;
     }
 
@@ -80,7 +119,7 @@ export default function TaskArea() {
       content: input,
       role: "user",
     };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
@@ -91,22 +130,34 @@ export default function TaskArea() {
 
       // Comandos mejorados con expresiones regulares
       if (/(mostrar|listar|ver)\s+(mis\s+)?tareas/i.test(lowerInput)) {
-        const pendingTasks = tasks.filter(t => t.status !== "done");
+        const pendingTasks = tasks.filter((t) => t.status !== "done");
         if (pendingTasks.length === 0) {
           response = "No tienes tareas pendientes. ¡Buen trabajo!";
         } else {
-          response = "📋 Tus tareas pendientes:\n" + 
-            pendingTasks.map(t => 
-              `• ${t.title} (${t.priority === "high" ? "🔴 Alta" : t.priority === "medium" ? "🟡 Media" : "🟢 Baja"})` +
-              (t.dueDate ? ` - Para el ${format(t.dueDate, 'PP', { locale: es })}` : "")
-            ).join("\n");
+          response =
+            "📋 Tus tareas pendientes:\n" +
+            pendingTasks
+              .map(
+                (t) =>
+                  `• ${t.title} (${
+                    t.priority === "high"
+                      ? "🔴 Alta"
+                      : t.priority === "medium"
+                      ? "🟡 Media"
+                      : "🟢 Baja"
+                  })` +
+                  (t.dueDate
+                    ? ` - Para el ${format(t.dueDate, "PP", { locale: es })}`
+                    : "")
+              )
+              .join("\n");
         }
-      } 
-      else if (/(crear|nueva|agregar)\s+tarea/i.test(lowerInput)) {
+      } else if (/(crear|nueva|agregar)\s+tarea/i.test(lowerInput)) {
         const { title, priority, dueDate } = parseTaskCommand(input);
-        
+
         if (!title) {
-          response = "Por favor especifica el nombre de la tarea. Ejemplo: 'Crear tarea Proyecto final con prioridad alta para el 30 de mayo'";
+          response =
+            "Por favor especifica el nombre de la tarea. Ejemplo: 'Crear tarea Proyecto final con prioridad alta para el 30 de mayo'";
         } else {
           const newTask: Task = {
             id: generateId(),
@@ -115,17 +166,24 @@ export default function TaskArea() {
             priority: priority || "medium",
             status: "todo",
             dueDate,
-            createdAt: new Date()
+            createdAt: new Date(),
           };
-          setTasks(prev => [...prev, newTask]);
-          response = `✅ Tarea creada: "${title}"${priority ? ` (Prioridad: ${priority})` : ''}${dueDate ? ` (Fecha límite: ${format(dueDate, 'PPP', { locale: es })})` : ''}`;
+          setTasks((prev) => [...prev, newTask]);
+          response = `✅ Tarea creada: "${title}"${
+            priority ? ` (Prioridad: ${priority})` : ""
+          }${
+            dueDate
+              ? ` (Fecha límite: ${format(dueDate, "PPP", { locale: es })})`
+              : ""
+          }`;
           taskData = newTask;
         }
-      }
-      else if (/(modificar|editar|actualizar)\s+tarea/i.test(lowerInput)) {
+      } else if (/(modificar|editar|actualizar)\s+tarea/i.test(lowerInput)) {
         const taskName = extractTaskTitle(input);
-        const taskIndex = tasks.findIndex(t => t.title.toLowerCase().includes(taskName.toLowerCase()));
-        
+        const taskIndex = tasks.findIndex((t) =>
+          t.title.toLowerCase().includes(taskName.toLowerCase())
+        );
+
         if (taskIndex === -1) {
           response = `No encontré la tarea "${taskName}". ¿Podrías verificar el nombre?`;
         } else {
@@ -134,88 +192,118 @@ export default function TaskArea() {
             const newPriority = detectPriority(input);
             if (newPriority) {
               const updatedTasks = [...tasks];
-              updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], priority: newPriority };
+              updatedTasks[taskIndex] = {
+                ...updatedTasks[taskIndex],
+                priority: newPriority,
+              };
               setTasks(updatedTasks);
               response = `✅ Prioridad de "${updatedTasks[taskIndex].title}" cambiada a ${newPriority}`;
             } else {
               response = `Por favor especifica la nueva prioridad. Ejemplo: "Cambiar prioridad de ${taskName} a alta"`;
             }
-          } 
-          else if (/(cambiar|modificar)\s+fecha/i.test(lowerInput)) {
+          } else if (/(cambiar|modificar)\s+fecha/i.test(lowerInput)) {
             const newDate = parseDateFromCommand(input);
             if (newDate) {
               const updatedTasks = [...tasks];
-              updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], dueDate: newDate };
+              updatedTasks[taskIndex] = {
+                ...updatedTasks[taskIndex],
+                dueDate: newDate,
+              };
               setTasks(updatedTasks);
-              response = `✅ Fecha de "${updatedTasks[taskIndex].title}" cambiada a ${format(newDate, 'PPP', { locale: es })}`;
+              response = `✅ Fecha de "${
+                updatedTasks[taskIndex].title
+              }" cambiada a ${format(newDate, "PPP", { locale: es })}`;
             } else {
               response = `Por favor especifica la nueva fecha. Ejemplo: "Cambiar fecha de ${taskName} al 30 de mayo"`;
             }
-          }
-          else {
+          } else {
             response = `Para modificar la tarea "${tasks[taskIndex].title}", por favor especifica qué quieres cambiar:\n\n- "Cambiar prioridad de ${taskName} a alta"\n- "Cambiar fecha de ${taskName} al 30 de mayo"\n- "Editar descripción de ${taskName}"`;
           }
         }
-      }
-      else if (/(completar|marcar|terminar)\s+tarea/i.test(lowerInput)) {
+      } else if (/(completar|marcar|terminar)\s+tarea/i.test(lowerInput)) {
         const taskName = extractTaskTitle(input);
-        const taskIndex = tasks.findIndex(t => t.title.toLowerCase().includes(taskName.toLowerCase()));
-        
+        const taskIndex = tasks.findIndex((t) =>
+          t.title.toLowerCase().includes(taskName.toLowerCase())
+        );
+
         if (taskIndex === -1) {
           response = `No encontré la tarea "${taskName}". ¿Podrías verificar el nombre?`;
         } else {
           const updatedTasks = [...tasks];
-          updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], status: "done" };
+          updatedTasks[taskIndex] = {
+            ...updatedTasks[taskIndex],
+            status: "done",
+          };
           setTasks(updatedTasks);
           response = `✅ Tarea "${updatedTasks[taskIndex].title}" marcada como completada. ¡Buen trabajo!`;
         }
-      }
-      else if (/(buscar|encontrar|localizar)\s+tarea/i.test(lowerInput)) {
-        const searchTerm = input.replace(/(buscar|encontrar|localizar)\s+tarea/i, "").trim();
+      } else if (/(buscar|encontrar|localizar)\s+tarea/i.test(lowerInput)) {
+        const searchTerm = input
+          .replace(/(buscar|encontrar|localizar)\s+tarea/i, "")
+          .trim();
         if (!searchTerm) {
-          response = "Por favor especifica qué tarea buscas. Ejemplo: 'Buscar tarea documentos'";
+          response =
+            "Por favor especifica qué tarea buscas. Ejemplo: 'Buscar tarea documentos'";
         } else {
-          const foundTasks = tasks.filter(t => 
-            t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase()))
+          const foundTasks = tasks.filter(
+            (t) =>
+              t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (t.description &&
+                t.description.toLowerCase().includes(searchTerm.toLowerCase()))
           );
-          
+
           if (foundTasks.length === 0) {
             response = `No encontré tareas que coincidan con "${searchTerm}"`;
           } else {
-            response = `🔍 Tareas encontradas (${foundTasks.length}):\n` + 
-              foundTasks.map(t => 
-                `• ${t.title} (${t.status === "done" ? "✅ Completada" : "🟡 Pendiente"})`
-              ).join("\n");
+            response =
+              `🔍 Tareas encontradas (${foundTasks.length}):\n` +
+              foundTasks
+                .map(
+                  (t) =>
+                    `• ${t.title} (${
+                      t.status === "done" ? "✅ Completada" : "🟡 Pendiente"
+                    })`
+                )
+                .join("\n");
           }
         }
-      }
-      else {
-        // Respuesta por defecto mejorada
-        response = `Puedo ayudarte con:\n\n` +
-          `• Crear tareas: "Crear tarea Revisar documentos con prioridad alta"\n` +
-          `• Mostrar tareas: "Mostrar mis tareas pendientes"\n` +
-          `• Modificar tareas: "Cambiar prioridad de Revisar documentos a media"\n` +
-          `• Completar tareas: "Marcar Revisar documentos como completada"\n` +
-          `• Buscar tareas: "Buscar tarea documentos"\n\n` +
-          `¿En qué más puedo ayudarte?`;
+      } else {
+        try {
+          const chatResponse = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message: input }),
+          });
+
+          const chatData = await chatResponse.json();
+          response =
+            chatData.content ||
+            "🤖 No entendí tu mensaje. ¿Puedes reformularlo?";
+        } catch (apiError) {
+          console.error("Error llamando a la API de Hugging Face:", apiError);
+          response =
+            "⚠️ No se pudo contactar al asistente. Usa comandos como 'crear tarea' o 'mostrar tareas'.";
+        }
       }
 
       const aiMessage: Message = {
         id: generateId(),
         content: response,
         role: "assistant",
-        taskData
+        taskData,
       };
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("Error:", error);
       const errorMessage: Message = {
         id: generateId(),
-        content: "⚠️ Lo siento, ocurrió un error. Por favor intenta de nuevo o usa comandos más específicos.",
+        content:
+          "⚠️ Lo siento, ocurrió un error. Por favor intenta de nuevo o usa comandos más específicos.",
         role: "assistant",
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -226,37 +314,51 @@ export default function TaskArea() {
     const patterns = [
       /(?:modificar|editar|completar|marcar|buscar|cambiar)\s+(?:tarea\s+)?["']?([^"'\n]+)/i,
       /(?:modificar|editar|completar|marcar|buscar|cambiar)\s+(?:la tarea\s+)?["']?([^"'\n]+)/i,
-      /(?:tarea\s+)?["']?([^"'\n]+)\s+(?:como completada|a alta|a media|a baja|al \d+)/i
+      /(?:tarea\s+)?["']?([^"'\n]+)\s+(?:como completada|a alta|a media|a baja|al \d+)/i,
     ];
-    
+
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match && match[1]) {
-        return match[1].trim().replace(/\s*$/, '');
+        return match[1].trim().replace(/\s*$/, "");
       }
     }
     return "";
   };
 
-  const parseTaskCommand = (text: string): { title: string; priority?: "low" | "medium" | "high"; dueDate?: Date } => {
-    const titleMatch = text.match(/(?:crear|nueva|agregar)\s+tarea\s+(?:llamada|con nombre)?\s*["']?([^"'\n]+)/i) || 
-                      text.match(/(?:crear|nueva|agregar)\s+tarea\s*["']?([^"'\n]+)/i);
+  const parseTaskCommand = (
+    text: string
+  ): {
+    title: string;
+    priority?: "low" | "medium" | "high";
+    dueDate?: Date;
+  } => {
+    const titleMatch =
+      text.match(
+        /(?:crear|nueva|agregar)\s+tarea\s+(?:llamada|con nombre)?\s*["']?([^"'\n]+)/i
+      ) || text.match(/(?:crear|nueva|agregar)\s+tarea\s*["']?([^"'\n]+)/i);
     let title = titleMatch?.[1]?.trim() || "";
 
-    // Limpiar el título
-    title = title.replace(/\s+con\s+prioridad\s+(alta|media|baja)/i, '')
-                 .replace(/\s+para\s+el\s+.+$/i, '')
-                 .trim();
+    title = title
+      .replace(/\s+con\s+prioridad\s+(alta|media|baja)/i, "")
+      .replace(/\s+para\s+el\s+.+$/i, "")
+      .trim();
 
-    // Extraer prioridad
     let priority: "low" | "medium" | "high" | undefined;
     const priorityMatch = text.match(/(?:prioridad\s+)?(alta|media|baja)/i);
     if (priorityMatch) {
       priority = priorityMatch[1].toLowerCase() as "low" | "medium" | "high";
     }
 
-    // Extraer fecha
-    let dueDate: Date | undefined = parseDateFromCommand(text);
+    let dueDate: Date | undefined;
+    try {
+      dueDate = parseDateFromCommand(text);
+      if (dueDate && isNaN(dueDate.getTime())) {
+        dueDate = undefined;
+      }
+    } catch (e) {
+      dueDate = undefined;
+    }
 
     return { title, priority, dueDate };
   };
@@ -267,7 +369,7 @@ export default function TaskArea() {
       /(?:para|el|hasta)\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/i,
       /(?:para|el|hasta)\s+(\d{1,2})\/(\d{1,2})/i,
       /(?:para|el|hasta)\s+(\w+)\s+(\d{1,2})/i,
-      /(?:para|el|hasta)\s+(mañana|pasado mañana|próximo lunes|próxima semana)/i
+      /(?:para|el|hasta)\s+(mañana|pasado mañana|próximo lunes|próxima semana)/i,
     ];
 
     for (const pattern of datePatterns) {
@@ -275,8 +377,7 @@ export default function TaskArea() {
       if (match) {
         try {
           let dateStr = match[0].replace(/(?:para|el|hasta)\s+/i, "");
-          
-          // Manejar expresiones especiales
+
           if (dateStr === "mañana") {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
@@ -287,7 +388,19 @@ export default function TaskArea() {
             dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
             return dayAfterTomorrow;
           }
-          
+          if (dateStr === "próximo lunes") {
+            const nextMonday = new Date();
+            nextMonday.setDate(
+              nextMonday.getDate() + ((1 + 7 - nextMonday.getDay()) % 7)
+            );
+            return nextMonday;
+          }
+          if (dateStr === "próxima semana") {
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            return nextWeek;
+          }
+
           return new Date(dateStr);
         } catch (e) {
           continue;
@@ -297,7 +410,9 @@ export default function TaskArea() {
     return undefined;
   };
 
-  const detectPriority = (text: string): "low" | "medium" | "high" | undefined => {
+  const detectPriority = (
+    text: string
+  ): "low" | "medium" | "high" | undefined => {
     const priorityMatch = text.match(/(?:a|prioridad)\s+(alta|media|baja)/i);
     if (priorityMatch) {
       return priorityMatch[1].toLowerCase() as "low" | "medium" | "high";
@@ -311,35 +426,45 @@ export default function TaskArea() {
       title: "",
       priority: "medium",
       status: "todo",
-      dueDate: undefined
+      dueDate: undefined,
     });
   };
 
   const saveManualTask = () => {
-    if (!newTask.title.trim()) return;
-    
-    const generateId = () => {
-      return Math.random().toString(36).substring(2, 15) + 
-             Math.random().toString(36).substring(2, 15);
-    };
+    if (!newTask.title?.trim()) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(2, 15),
+          content: "⚠️ Por favor ingresa un título para la tarea",
+          role: "assistant",
+        },
+      ]);
+      return;
+    }
 
     const task: Task = {
-      id: generateId(),
-      title: newTask.title,
-      description: newTask.description,
+      id:
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15),
+      title: newTask.title.trim(),
+      description: newTask.description?.trim(),
       priority: newTask.priority || "medium",
       status: "todo",
-      dueDate: newTask.dueDate,
-      createdAt: new Date()
+      dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined,
+      createdAt: new Date(),
     };
 
-    setTasks(prev => [...prev, task]);
-    setMessages(prev => [...prev, {
-      id: generateId(),
-      content: `✅ Tarea creada manualmente: "${task.title}"`,
-      role: "assistant",
-      taskData: task
-    }]);
+    setTasks((prev) => [...prev, task]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(36).substring(2, 15),
+        content: `✅ Tarea creada: "${task.title}"`,
+        role: "assistant",
+        taskData: task,
+      },
+    ]);
     setIsCreatingTask(false);
   };
 
@@ -348,7 +473,7 @@ export default function TaskArea() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const filteredTasks = tasks.filter(task => 
+  const filteredTasks = tasks.filter((task) =>
     activeTab === "all" ? true : task.status === activeTab
   );
 
@@ -367,22 +492,26 @@ export default function TaskArea() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardNavbar />
-      
+
       <main className="flex-1 p-4 lg:p-6 flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Gestión de Tareas</h1>
-            <p className="text-sm text-gray-500">Organiza y planifica tus actividades</p>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Gestión de Tareas
+            </h1>
+            <p className="text-sm text-gray-500">
+              Organiza y planifica tus actividades
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
               onClick={() => router.push("/dashboard/taskArea/create")}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               <Sparkles className="h-4 w-4 mr-2" />
               Nueva Tarea
             </Button>
-            <Button 
+            <Button
               onClick={startManualTaskCreation}
               variant="outline"
               className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
@@ -394,7 +523,7 @@ export default function TaskArea() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 flex-1">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6"
@@ -403,37 +532,38 @@ export default function TaskArea() {
               <ListChecks className="h-5 w-5 text-emerald-600" />
               <h2 className="text-lg font-semibold">Mis Tareas</h2>
               <span className="ml-auto text-sm text-gray-500">
-                {sortedTasks.length} {sortedTasks.length === 1 ? "tarea" : "tareas"}
+                {sortedTasks.length}{" "}
+                {sortedTasks.length === 1 ? "tarea" : "tareas"}
               </span>
             </div>
-            
+
             <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-              <Button 
-                variant={activeTab === "all" ? "default" : "outline"} 
+              <Button
+                variant={activeTab === "all" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveTab("all")}
                 className="whitespace-nowrap"
               >
                 Todas
               </Button>
-              <Button 
-                variant={activeTab === "todo" ? "default" : "outline"} 
+              <Button
+                variant={activeTab === "todo" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveTab("todo")}
                 className="whitespace-nowrap"
               >
                 Por hacer
               </Button>
-              <Button 
-                variant={activeTab === "in-progress" ? "default" : "outline"} 
+              <Button
+                variant={activeTab === "in-progress" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveTab("in-progress")}
                 className="whitespace-nowrap"
               >
                 En progreso
               </Button>
-              <Button 
-                variant={activeTab === "done" ? "default" : "outline"} 
+              <Button
+                variant={activeTab === "done" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveTab("done")}
                 className="whitespace-nowrap"
@@ -444,8 +574,11 @@ export default function TaskArea() {
 
             <div className="space-y-3">
               {sortedTasks.length > 0 ? (
-                sortedTasks.map(task => (
-                  <Card key={task.id} className="p-3 hover:shadow-md transition-shadow group">
+                sortedTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    className="p-3 hover:shadow-md transition-shadow group"
+                  >
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -457,27 +590,40 @@ export default function TaskArea() {
                           )}
                         </div>
                         {task.description && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{task.description}</p>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                            {task.description}
+                          </p>
                         )}
                         {task.dueDate && (
                           <div className="flex items-center text-xs text-gray-500 mt-2">
                             <Calendar className="h-3 w-3 mr-1" />
                             <span>
-                              {format(task.dueDate, 'PPP', { locale: es })}
-                              {task.dueDate < new Date() && task.status !== "done" && (
-                                <span className="text-red-500 ml-1">(Vencida)</span>
-                              )}
+                              {format(task.dueDate, "PPP", { locale: es })}
+                              {task.dueDate < new Date() &&
+                                task.status !== "done" && (
+                                  <span className="text-red-500 ml-1">
+                                    (Vencida)
+                                  </span>
+                                )}
                             </span>
                           </div>
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          task.priority === "high" ? "bg-red-100 text-red-800" : 
-                          task.priority === "medium" ? "bg-yellow-100 text-yellow-800" : 
-                          "bg-green-100 text-green-800"
-                        }`}>
-                          {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Media" : "Baja"}
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            task.priority === "high"
+                              ? "bg-red-100 text-red-800"
+                              : task.priority === "medium"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {task.priority === "high"
+                            ? "Alta"
+                            : task.priority === "medium"
+                            ? "Media"
+                            : "Baja"}
                         </span>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                           <Button variant="ghost" size="xs" className="h-6">
@@ -494,10 +640,11 @@ export default function TaskArea() {
               ) : (
                 <Card className="p-8 text-center">
                   <p className="text-sm text-gray-500">
-                    No hay tareas {activeTab !== "all" ? "en esta categoría" : "aún"}.
+                    No hay tareas{" "}
+                    {activeTab !== "all" ? "en esta categoría" : "aún"}.
                   </p>
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     className="text-emerald-600 mt-2"
                     onClick={startManualTaskCreation}
                   >
@@ -519,20 +666,29 @@ export default function TaskArea() {
                 <h2 className="font-semibold">Asistente MultiTask AI</h2>
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">¿En qué puedo ayudarte hoy?</p>
+              <p className="text-sm text-gray-500 mt-1">
+                ¿En qué puedo ayudarte hoy?
+              </p>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-3"
-            style={{ maxHeight: '600px' }} // Altura fija para activar el scroll
+            <div
+              className="flex-1 p-4 overflow-y-auto space-y-3"
+              style={{ maxHeight: "600px" }} // Altura fija para activar el scroll
             >
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
                 >
-                  <Card className={`max-w-xs p-3 ${
-                    message.role === "user" ? "bg-emerald-600 text-white" : "bg-gray-50"
-                  }`}>
+                  <Card
+                    className={`max-w-xs p-3 ${
+                      message.role === "user"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-50"
+                    }`}
+                  >
                     <div className="flex items-center mb-1">
                       {message.role === "user" ? (
                         <User className="h-4 w-4 mr-2" />
@@ -543,17 +699,27 @@ export default function TaskArea() {
                         {message.role === "user" ? "Tú" : "MultiTask AI"}
                       </span>
                     </div>
-                    <p className="text-sm whitespace-pre-line">{message.content}</p>
+                    <p className="text-sm whitespace-pre-line">
+                      {message.content}
+                    </p>
                     {message.taskData && (
                       <div className="mt-2 pt-2 border-t border-gray-200 text-xs">
                         <div className="flex items-center gap-1">
                           <Flag className="h-3 w-3" />
-                          <span className="capitalize">{message.taskData.priority}</span>
+                          <span className="capitalize">
+                            {message.taskData.priority}
+                          </span>
                         </div>
                         {message.taskData.dueDate && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            <span>{format(new Date(message.taskData.dueDate), 'PP', { locale: es })}</span>
+                            <span>
+                              {format(
+                                new Date(message.taskData.dueDate),
+                                "PP",
+                                { locale: es }
+                              )}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -577,65 +743,63 @@ export default function TaskArea() {
             <div className="p-4 border-t border-gray-200">
               {isCreatingTask ? (
                 <div className="space-y-3">
-                  <Input
+                  <input
                     placeholder="Título de la tarea"
                     value={newTask.title || ""}
-                    onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, title: e.target.value })
+                    }
+                    className="w-full border rounded-lg p-2 text-sm"
                   />
-                  <Input
+                  <input
                     placeholder="Descripción (opcional)"
                     value={newTask.description || ""}
-                    onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, description: e.target.value })
+                    }
+                    className="w-full border rounded-lg p-2 text-sm"
+                  />
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) =>
+                      setNewTask({
+                        ...newTask,
+                        priority: e.target.value as "low" | "medium" | "high",
+                      })
+                    }
+                    className="w-full border rounded-lg p-2 text-sm"
+                  >
+                    <option value="low">Baja prioridad</option>
+                    <option value="medium">Media prioridad</option>
+                    <option value="high">Alta prioridad</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={
+                      newTask.dueDate
+                        ? format(newTask.dueDate, "yyyy-MM-dd")
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setNewTask({
+                        ...newTask,
+                        dueDate: e.target.value
+                          ? new Date(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    className="w-full border rounded-lg p-2 text-sm"
                   />
                   <div className="flex gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-between">
-                          <Flag className="h-4 w-4 mr-2" />
-                          {newTask.priority === "high" ? "Alta" : 
-                           newTask.priority === "medium" ? "Media" : "Baja"}
-                          <ChevronDown className="h-4 w-4 ml-2" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => setNewTask({...newTask, priority: "high"})}>
-                          <span className="text-red-500">Alta prioridad</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setNewTask({...newTask, priority: "medium"})}>
-                          <span className="text-yellow-500">Media prioridad</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setNewTask({...newTask, priority: "low"})}>
-                          <span className="text-green-500">Baja prioridad</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          {newTask.dueDate ? format(newTask.dueDate, 'PPP', { locale: es }) : "Fecha límite"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <CalendarUI
-                          mode="single"
-                          selected={newTask.dueDate}
-                          onSelect={(date) => setNewTask({...newTask, dueDate: date})}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1" 
+                    <Button
+                      variant="outline"
+                      className="flex-1"
                       onClick={() => setIsCreatingTask(false)}
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700" 
+                    <Button
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
                       onClick={saveManualTask}
                       disabled={!newTask.title}
                     >
@@ -651,10 +815,12 @@ export default function TaskArea() {
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Escribe tu consulta o comando..."
                       className="w-full pr-10 border rounded-lg p-2 text-sm"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleSendMessage()
+                      }
                       disabled={isLoading}
                     />
-                    <button 
+                    <button
                       onClick={handleSendMessage}
                       disabled={isLoading || !input.trim()}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
@@ -667,18 +833,18 @@ export default function TaskArea() {
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="text-xs h-8"
                       onClick={() => setInput("Mostrar mis tareas pendientes")}
                     >
                       <ListChecks className="h-3 w-3 mr-1" />
                       Ver tareas
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="text-xs h-8"
                       onClick={() => setInput("Crear tarea ")}
                     >
