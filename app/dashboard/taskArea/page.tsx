@@ -15,6 +15,11 @@ import {
   Flag,
   ChevronDown,
   Plus,
+  Check,
+  Edit,
+  RotateCcw,
+  ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import DashboardNavbar from "@/components/DashboardNavbar";
@@ -22,29 +27,14 @@ import DashboardFooter from "@/components/DashboardFooter";
 import { getToken } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-
-/*
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarUI } from "@/components/ui/calendar";
-*/
+import AuthGuard from '@/components/AuthGuard'
 
 type Task = {
   id: string;
   title: string;
   description?: string;
   dueDate?: Date;
-  priority: "low" | "medium" | "high";
+  priority: "Baja" | "Media" | "Alta";
   status: "todo" | "in-progress" | "done";
   createdAt: Date;
 };
@@ -87,10 +77,85 @@ export default function TaskArea() {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: "",
-    priority: "medium",
+    priority: "Media",
     status: "todo",
   });
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Función para manejar el cambio de estado de una tarea
+  const handleStatusChange = (taskId: string, newStatus: Task["status"]) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId ? { ...task, status: newStatus } : task
+      )
+    );
+
+    // Mostrar mensaje de confirmación
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content: `✅ Tarea "${task.title}" ${
+            newStatus === "done"
+              ? "completada"
+              : newStatus === "in-progress"
+              ? "en progreso"
+              : "pendiente"
+          }`,
+          role: "assistant",
+        },
+      ]);
+    }
+  };
+
+  // Función para editar una tarea
+  const handleEditTask = (taskId: string) => {
+    const taskToEdit = tasks.find((task) => task.id === taskId);
+    if (taskToEdit) {
+      setNewTask({
+        title: taskToEdit.title,
+        description: taskToEdit.description,
+        priority: taskToEdit.priority,
+        dueDate: taskToEdit.dueDate,
+      });
+      setEditingTaskId(taskId);
+      setIsCreatingTask(true);
+    }
+  };
+
+  // Función para guardar los cambios al editar
+  const saveEditedTask = () => {
+    if (!newTask.title?.trim() || !editingTaskId) return;
+
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === editingTaskId
+          ? {
+              ...task,
+              title: newTask.title || "",
+              description: newTask.description,
+              priority: newTask.priority || "Media",
+              dueDate: newTask.dueDate,
+            }
+          : task
+      )
+    );
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        content: `✅ Tarea "${newTask.title}" actualizada`,
+        role: "assistant",
+      },
+    ]);
+
+    setIsCreatingTask(false);
+    setEditingTaskId(null);
+  };
 
   // Función mejorada para manejar mensajes
   const handleSendMessage = async () => {
@@ -140,9 +205,9 @@ export default function TaskArea() {
               .map(
                 (t) =>
                   `• ${t.title} (${
-                    t.priority === "high"
+                    t.priority === "Alta"
                       ? "🔴 Alta"
-                      : t.priority === "medium"
+                      : t.priority === "Media"
                       ? "🟡 Media"
                       : "🟢 Baja"
                   })` +
@@ -163,7 +228,7 @@ export default function TaskArea() {
             id: generateId(),
             title,
             description: `Tarea creada desde el chat: ${input}`,
-            priority: priority || "medium",
+            priority: priority || "Media",
             status: "todo",
             dueDate,
             createdAt: new Date(),
@@ -309,6 +374,23 @@ export default function TaskArea() {
     }
   };
 
+   // Función para eliminar una tarea
+  const handleDeleteTask = (taskId: string) => {
+    const taskToDelete = tasks.find(task => task.id === taskId);
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+    
+    if (taskToDelete) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content: `🗑️ Tarea "${taskToDelete.title}" eliminada`,
+          role: "assistant",
+        },
+      ]);
+    }
+  };
+
   // Funciones auxiliares mejoradas
   const extractTaskTitle = (text: string): string => {
     const patterns = [
@@ -330,7 +412,7 @@ export default function TaskArea() {
     text: string
   ): {
     title: string;
-    priority?: "low" | "medium" | "high";
+    priority?: "Baja" | "Media" | "Alta";
     dueDate?: Date;
   } => {
     const titleMatch =
@@ -344,10 +426,10 @@ export default function TaskArea() {
       .replace(/\s+para\s+el\s+.+$/i, "")
       .trim();
 
-    let priority: "low" | "medium" | "high" | undefined;
+    let priority: "Baja" | "Media" | "Alta" | undefined;
     const priorityMatch = text.match(/(?:prioridad\s+)?(alta|media|baja)/i);
     if (priorityMatch) {
-      priority = priorityMatch[1].toLowerCase() as "low" | "medium" | "high";
+      priority = priorityMatch[1].toLowerCase() as "Baja" | "Media" | "Alta";
     }
 
     let dueDate: Date | undefined;
@@ -412,10 +494,10 @@ export default function TaskArea() {
 
   const detectPriority = (
     text: string
-  ): "low" | "medium" | "high" | undefined => {
+  ): "Baja" | "Media" | "Alta" | undefined => {
     const priorityMatch = text.match(/(?:a|prioridad)\s+(alta|media|baja)/i);
     if (priorityMatch) {
-      return priorityMatch[1].toLowerCase() as "low" | "medium" | "high";
+      return priorityMatch[1].toLowerCase() as "Baja" | "Media" | "Alta";
     }
     return undefined;
   };
@@ -424,7 +506,7 @@ export default function TaskArea() {
     setIsCreatingTask(true);
     setNewTask({
       title: "",
-      priority: "medium",
+      priority: "Media",
       status: "todo",
       dueDate: undefined,
     });
@@ -449,7 +531,7 @@ export default function TaskArea() {
         Math.random().toString(36).substring(2, 15),
       title: newTask.title.trim(),
       description: newTask.description?.trim(),
-      priority: newTask.priority || "medium",
+      priority: newTask.priority || "Media",
       status: "todo",
       dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined,
       createdAt: new Date(),
@@ -479,7 +561,7 @@ export default function TaskArea() {
 
   // Ordenar tareas por prioridad y fecha
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const priorityOrder = { high: 1, medium: 2, low: 3 };
+    const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
     if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     }
@@ -490,6 +572,7 @@ export default function TaskArea() {
   });
 
   return (
+    <AuthGuard>
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardNavbar />
 
@@ -505,19 +588,11 @@ export default function TaskArea() {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => router.push("/dashboard/taskArea/create")}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Nueva Tarea
-            </Button>
-            <Button
               onClick={startManualTaskCreation}
-              variant="outline"
-              className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+              className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-2"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Crear Rápido
+              <Plus className="h-4 w-4" />
+              <span>Crear Rápido</span>
             </Button>
           </div>
         </div>
@@ -572,87 +647,185 @@ export default function TaskArea() {
               </Button>
             </div>
 
-            <div className="space-y-3">
-              {sortedTasks.length > 0 ? (
-                sortedTasks.map((task) => (
-                  <Card
-                    key={task.id}
-                    className="p-3 hover:shadow-md transition-shadow group"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium truncate">{task.title}</h3>
-                          {task.status === "done" && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                              Completada
-                            </span>
-                          )}
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                            {task.description}
-                          </p>
-                        )}
-                        {task.dueDate && (
-                          <div className="flex items-center text-xs text-gray-500 mt-2">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            <span>
-                              {format(task.dueDate, "PPP", { locale: es })}
-                              {task.dueDate < new Date() &&
-                                task.status !== "done" && (
-                                  <span className="text-red-500 ml-1">
-                                    (Vencida)
-                                  </span>
-                                )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            task.priority === "high"
-                              ? "bg-red-100 text-red-800"
-                              : task.priority === "medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {task.priority === "high"
-                            ? "Alta"
-                            : task.priority === "medium"
-                            ? "Media"
-                            : "Baja"}
+<div className="space-y-3">
+          {sortedTasks.length > 0 ? (
+            sortedTasks.map((task) => (
+              <Card
+                key={task.id}
+                className={`p-4 hover:shadow-md transition-shadow group ${
+                  task.dueDate && task.dueDate < new Date() && task.status !== "done"
+                    ? "border-l-4 border-red-500"
+                    : ""
+                }`}
+              >
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {task.title}
+                      </h3>
+                      {task.status === "done" ? (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                          Completada
                         </span>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          <Button variant="ghost" size="xs" className="h-6">
-                            Editar
-                          </Button>
-                          <Button variant="ghost" size="xs" className="h-6">
-                            {task.status === "done" ? "Reabrir" : "Completar"}
-                          </Button>
+                      ) : task.status === "in-progress" ? (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                          En progreso
+                        </span>
+                      ) : null}
+                    </div>
+                    {task.description && (
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        {task.description}
+                      </p>
+                    )}
+                    {task.dueDate && (
+                      <div className="flex items-center text-xs text-gray-500 mt-2">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        <span>
+                          {format(task.dueDate, "PPP", { locale: es })}
+                          {task.dueDate < new Date() &&
+                            task.status !== "done" && (
+                              <span className="text-red-500 ml-1">
+                                (Vencida)
+                              </span>
+                            )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        task.priority === "Alta"
+                          ? "bg-red-100 text-red-800"
+                          : task.priority === "Media"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {task.priority}
+                    </span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Botón Editar */}
+                      <div className="relative group/tooltip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 p-0"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Edit className="h-5 w-5" />
+                        </Button>
+                        <div className="absolute z-10 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                          Editar tarea
+                          <div className="absolute top-full left-1/2 w-0 h-0 border-l-4 border-r-4 border-b-0 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 transform -translate-x-1/2"></div>
                         </div>
                       </div>
+
+                      {/* Botón Eliminar */}
+                      <div className="relative group/tooltip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 p-0 text-red-600 hover:text-red-800"
+                          onClick={() => handleDeleteTask(task.id)}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                        <div className="absolute z-10 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                          Eliminar tarea
+                          <div className="absolute top-full left-1/2 w-0 h-0 border-l-4 border-r-4 border-b-0 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 transform -translate-x-1/2"></div>
+                        </div>
+                      </div>
+
+                      {task.status === "done" ? (
+                        // Botón Reabrir
+                        <div className="relative group/tooltip">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0"
+                            onClick={() => handleStatusChange(task.id, "todo")}
+                          >
+                            <RotateCcw className="h-5 w-5" />
+                          </Button>
+                          <div className="absolute z-10 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                            Reabrir tarea
+                            <div className="absolute top-full left-1/2 w-0 h-0 border-l-4 border-r-4 border-b-0 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 transform -translate-x-1/2"></div>
+                          </div>
+                        </div>
+                      ) : task.status === "in-progress" ? (
+                        // Botón Completar
+                        <div className="relative group/tooltip">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0"
+                            onClick={() => handleStatusChange(task.id, "done")}
+                          >
+                            <Check className="h-5 w-5" />
+                          </Button>
+                          <div className="absolute z-10 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                            Completar tarea
+                            <div className="absolute top-full left-1/2 w-0 h-0 border-l-4 border-r-4 border-b-0 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 transform -translate-x-1/2"></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Botón Mover a En Progreso */}
+                          <div className="relative group/tooltip">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 w-9 p-0"
+                              onClick={() => handleStatusChange(task.id, "in-progress")}
+                            >
+                              <ArrowRight className="h-5 w-5" />
+                            </Button>
+                            <div className="absolute z-10 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                              Mover a En Progreso
+                              <div className="absolute top-full left-1/2 w-0 h-0 border-l-4 border-r-4 border-b-0 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 transform -translate-x-1/2"></div>
+                            </div>
+                          </div>
+                          {/* Botón Completar */}
+                          <div className="relative group/tooltip">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 w-9 p-0"
+                              onClick={() => handleStatusChange(task.id, "done")}
+                            >
+                              <Check className="h-5 w-5" />
+                            </Button>
+                            <div className="absolute z-10 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                              Completar tarea
+                              <div className="absolute top-full left-1/2 w-0 h-0 border-l-4 border-r-4 border-b-0 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 transform -translate-x-1/2"></div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  </Card>
-                ))
-              ) : (
-                <Card className="p-8 text-center">
-                  <p className="text-sm text-gray-500">
-                    No hay tareas{" "}
-                    {activeTab !== "all" ? "en esta categoría" : "aún"}.
-                  </p>
-                  <Button
-                    variant="link"
-                    className="text-emerald-600 mt-2"
-                    onClick={startManualTaskCreation}
-                  >
-                    Crear una nueva tarea
-                  </Button>
-                </Card>
-              )}
-            </div>
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <Card className="p-8 text-center">
+              <p className="text-sm text-gray-500">
+                No hay tareas{" "}
+                {activeTab !== "all" ? "en esta categoría" : "aún"}.
+              </p>
+              <Button
+                variant="link"
+                className="text-emerald-600 mt-2"
+                onClick={startManualTaskCreation}
+              >
+                Crear una nueva tarea
+              </Button>
+            </Card>
+          )}
+        </div>
           </motion.div>
 
           <motion.div
@@ -764,14 +937,14 @@ export default function TaskArea() {
                     onChange={(e) =>
                       setNewTask({
                         ...newTask,
-                        priority: e.target.value as "low" | "medium" | "high",
+                        priority: e.target.value as "Baja" | "Media" | "Alta",
                       })
                     }
                     className="w-full border rounded-lg p-2 text-sm"
                   >
-                    <option value="low">Baja prioridad</option>
-                    <option value="medium">Media prioridad</option>
-                    <option value="high">Alta prioridad</option>
+                    <option value="Baja">Baja prioridad</option>
+                    <option value="Media">Media prioridad</option>
+                    <option value="Alta">Alta prioridad</option>
                   </select>
                   <input
                     type="date"
@@ -858,8 +1031,8 @@ export default function TaskArea() {
           </motion.div>
         </div>
       </main>
-
       <DashboardFooter />
     </div>
+    </AuthGuard>
   );
 }

@@ -91,7 +91,7 @@ async function queryModel(model: string, message: string, action: DetectedAction
       case 'create':
         systemPrompt = `Eres un asistente especializado en creación de tareas. Ayuda al usuario a formular correctamente la tarea con todos los detalles necesarios.`;
         examples = `Ejemplos:
-- "Crear tarea 'Revisar documentos del contrato' con prioridad alta para el viernes 15 de junio"
+- "Crear tarea 'Revisar documentos del contrato' con prioridad Alta para el viernes 15 de junio"
 - "Agregar 'Llamar al cliente Juan Pérez para confirmar la reunión' para mañana a las 11am"`;
         break;
         
@@ -99,7 +99,7 @@ async function queryModel(model: string, message: string, action: DetectedAction
         systemPrompt = `Eres un asistente para modificar tareas. Pide confirmación antes de cambiar cualquier dato.`;
         examples = `Ejemplos:
 - "Cambiar fecha de 'Revisar documentos' al 15 de junio"
-- "Actualizar la prioridad de 'Informe final' a alta"`;
+- "Actualizar la prioridad de 'Informe final' a Alta"`;
         break;
         
       case 'complete':
@@ -113,7 +113,7 @@ async function queryModel(model: string, message: string, action: DetectedAction
         systemPrompt = `Eres un asistente para listar tareas. Ofrece opciones de filtrado.`;
         examples = `Ejemplos:
 - "Mostrar mis tareas pendientes"
-- "Listar tareas con prioridad alta"`;
+- "Listar tareas con prioridad Alta"`;
         break;
         
       case 'search':
@@ -202,7 +202,7 @@ function detectEnhancedTaskAction(message: string, context: string[] = []): Dete
   const date = dateMatch ? dateMatch[0] : undefined;
   
   // Detección de prioridad
-  const priorityMatch = lowerMsg.match(/(alta|media|baja|crítica|importante|urgente|prioritaria)/i);
+  const priorityMatch = lowerMsg.match(/(Alta|Media|Baja|crítica|importante|urgente|prioritaria)/i);
   const priority = priorityMatch ? priorityMatch[0] : undefined;
   
   // Detección de categoría
@@ -312,7 +312,7 @@ function getEnhancedFallbackResponse(message: string, action: TaskAction, subTyp
       return `Para crear una tarea, por favor especifica: 
 1. Nombre claro de la tarea (ej: "Revisar documentos del contrato")
 2. Fecha límite si aplica (ej: "para el viernes 15 de junio")
-3. Prioridad si es importante (ej: "con prioridad alta")
+3. Prioridad si es importante (ej: "con prioridad Alta")
 4. Categoría si aplica (ej: "en la categoría Trabajo")`;
       
     case 'modify':
@@ -328,7 +328,7 @@ Ejemplos:
 1. Nombre exacto de la tarea
 2. Nueva prioridad (alta, media o baja)
 Ejemplo: 
-"Cambiar prioridad de 'Preparar presentación' a alta"`;
+"Cambiar prioridad de 'Preparar presentación' a Alta"`;
       }
       if (subType === 'description') {
         return `Para editar descripciones, indica:
@@ -339,7 +339,7 @@ Ejemplo:
       }
       return `Para modificar tareas, especifica qué quieres cambiar:
 - "Cambiar fecha de [tarea] a [nueva fecha]"
-- "Actualizar prioridad de [tarea] a [alta/media/baja]"
+- "Actualizar prioridad de [tarea] a [Alta/Media/Baja]"
 - "Editar descripción de [tarea] para incluir [nuevos detalles]"`;
       
     case 'complete':
@@ -353,7 +353,7 @@ Ejemplos:
     case 'list':
       return `Puedo listar tus tareas de varias formas:
 - "Mostrar todas mis tareas pendientes"
-- "Listar tareas con prioridad alta para esta semana"
+- "Listar tareas con prioridad Alta para esta semana"
 - "¿Qué tengo pendiente para hoy?"
 - "Mostrar tareas completadas en junio"`;
       
@@ -403,7 +403,7 @@ Ejemplo: "Mover 'Preparar presentación' a 'Trabajo'"`;
 4. 🔍 Búsqueda y filtrado de tareas
 
 Ejemplos:
-- "Crear tarea 'Enviar informe' para mañana con prioridad alta"
+- "Crear tarea 'Enviar informe' para mañana con prioridad Alta"
 - "Mostrar mis tareas pendientes de esta semana"`;
       }
       
@@ -455,7 +455,7 @@ function enhanceResponse(response: string, action: TaskAction, details?: Detecte
         if (details && !details.date) {
           enhanced += ' ¿Necesitas agregar una fecha límite para esta tarea?';
         } else if (details && !details.priority) {
-          enhanced += ' ¿Quieres asignar una prioridad (alta, media, baja)?';
+          enhanced += ' ¿Quieres asignar una prioridad (Alta, Media, Baja)?';
         }
       }
       break;
