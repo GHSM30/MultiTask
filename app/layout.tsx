@@ -1,10 +1,11 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from 'next/font/google';
 import "./globals.css";
 import Providers from './providers'; // Cambiado a importación por defecto
 import Head from 'next/head';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const geist = Geist({
+  subsets: ['latin'],
+  preload: false
 });
 
 export default function RootLayout({
