@@ -4,28 +4,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion} from "framer-motion";
+import { motion } from "framer-motion";
 import { CheckSquare, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, gql } from "@apollo/client";
 import { setCookie } from "@/lib/utils";
-import { ApolloError } from '@apollo/client';
-
-
-const LOGIN_MUTATION = gql`
-  mutation Login($email: String!, $password: String!) {
-    login(email: $email, password: $password) {
-      token
-      user {
-        id
-        email
-        firstName
-        lastName
-      }
-    }
-  }
-`;
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -37,49 +20,6 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const [login] = useMutation(LOGIN_MUTATION, {
-  onCompleted: async (data) => {
-    if (data?.login?.user) {
-      try {
-        const response = await fetch('/api/generate-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user: {
-              id: data.login.user.id,
-              email: data.login.user.email
-            }
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Error al generar token');
-        }
-
-        const { token } = await response.json();
-        setCookie("token", token, 7);
-        router.push("/dashboard/taskArea");
-      } catch (error) {
-        console.error('Error:', error);
-        setError("Error al iniciar sesión");
-        setIsLoading(false);
-      }
-    }
-  },
-  onError: (error: ApolloError) => {
-    const graphQLError = error.graphQLErrors?.[0];
-    
-    if (error.message.includes("credentials") || graphQLError?.extensions?.code === 'UNAUTHENTICATED') {
-      setError("Credenciales incorrectas");
-    } else {
-      setError("Error al iniciar sesión");
-    }
-    setIsLoading(false);
-  }
-});
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({
@@ -88,28 +28,54 @@ export default function LoginForm() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    
-    if (!formData.email || !formData.password) {
-      return;
-    }
-
-    const normalizedEmail = formData.email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      return;
-    }
-
-    setIsLoading(true);
-    await login({
-      variables: {
-        email: normalizedEmail,
-        password: formData.password
-      }
-    });
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+
+  if (!formData.email || !formData.password) {
+    setError("Por favor completa todos los campos");
+    setIsLoading(false);
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    setError("Por favor ingresa un correo electrónico válido");
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
+
+    // Guardar el token en localStorage
+    localStorage.setItem('authToken', data.token);
+    
+    // Redirigir al dashboard
+    window.location.href = '/dashboard/taskArea';
+    
+  } catch (error: any) {
+    setError(error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const multiTaskIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12">
@@ -177,7 +143,7 @@ export default function LoginForm() {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={togglePasswordVisibility}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
@@ -200,7 +166,6 @@ export default function LoginForm() {
               )}
             </Button>
           </form>
-          {/* Mensaje de error minimalista */}
           {error && (
             <p className="text-center text-red-500 text-sm mt-2">
               {error}

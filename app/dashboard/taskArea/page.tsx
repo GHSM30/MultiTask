@@ -27,7 +27,8 @@ import DashboardFooter from "@/components/DashboardFooter";
 import { getToken } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import AuthGuard from '@/components/AuthGuard'
+//import AuthGuard from '@/components/AuthGuard'
+
 
 type Task = {
   id: string;
@@ -572,7 +573,6 @@ export default function TaskArea() {
   });
 
   return (
-    <AuthGuard>
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardNavbar />
 
@@ -1033,6 +1033,5 @@ export default function TaskArea() {
       </main>
       <DashboardFooter />
     </div>
-    </AuthGuard>
   );
 }

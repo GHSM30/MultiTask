@@ -1,13 +1,51 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
+import { getCookie } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function DashboardNavbar() {
-  const { data: session } = useSession();
+  const [userName, setUserName] = useState("Cargando...");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = getCookie("token");
+        if (!token) {
+          router.push("/");
+          return;
+        }
+
+        const response = await fetch('/api/auth/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al obtener datos del usuario');
+        }
+
+        const userData = await response.json();
+        setUserName(`${userData.firstName} ${userData.lastName}`);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        setUserName("Usuario");
+      }
+    };
+
+    fetchUserData();
+  }, [router]);
+
+  const handleLogout = async () => {
+    // Eliminar la cookie
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    router.push("/login");
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -18,12 +56,24 @@ export default function DashboardNavbar() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <span className="text-sm font-medium">
-              {session?.user?.name || "Usuario"}
-            </span>
+            <div className="flex items-center space-x-4">
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-gray-500">Conectado como:</span>
+                <span className="text-sm font-medium">{userName}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-red-600"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Cerrar sesión
+              </Button>
+            </div>
             <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
               <span className="text-emerald-600 font-medium">
-                {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                {userName.charAt(0).toUpperCase()}
               </span>
             </div>
           </div>
@@ -42,16 +92,26 @@ export default function DashboardNavbar() {
         {isMenuOpen && (
           <div className="md:hidden pb-4 space-y-2">
             <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 mb-3">
                 <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
                   <span className="text-emerald-600 text-sm font-medium">
-                    {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                    {userName.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium">
-                  {session?.user?.name || "Usuario"}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-500">Conectado como:</span>
+                  <span className="text-sm font-medium">{userName}</span>
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="w-full text-gray-600 hover:text-red-600"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Cerrar sesión
+              </Button>
             </div>
           </div>
         )}

@@ -7,29 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, gql } from "@apollo/client";
-import { Eye, EyeOff } from "lucide-react"; // Importamos los íconos de visibilidad
-
-const REGISTER_MUTATION = gql`
-  mutation RegisterUser(
-    $firstName: String!
-    $lastName: String!
-    $email: String!
-    $password: String!
-  ) {
-    register(
-      firstName: $firstName
-      lastName: $lastName
-      email: $email
-      password: $password
-    ) {
-      id
-      email
-      firstName
-      lastName
-    }
-  }
-`;
+import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
@@ -42,35 +20,14 @@ export default function RegisterForm() {
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar contraseña
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Estado para mostrar confirmación
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const [register, { loading }] = useMutation(REGISTER_MUTATION, {
-    onCompleted: (data) => {
-      console.log("Registro exitoso - Datos recibidos:", data);
-      if (data?.register) {
-        router.push("/dashboard/login");
-      }
-    },
-    onError: (error) => {
-      console.group("Error en el registro");
-      console.log("Error completo:", error);
-      console.log("GraphQL Errors:", error.graphQLErrors);
-      console.log("Network Error:", error.networkError);
-      console.groupEnd();
-  
-      const serverMessage = error.graphQLErrors?.[0]?.message || 
-                         "Error al procesar el registro";
-      
-      setError(serverMessage);
-      triggerShake();
-    }
-  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -86,6 +43,11 @@ export default function RegisterForm() {
 
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,25 +81,33 @@ export default function RegisterForm() {
       return;
     }
 
+    setIsLoading(true);
+    
     try {
-      console.log("Intentando registrar:", formData);
-      const result = await register({
-        variables: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password
-        }
-      });
-      console.log("Resultado del registro:", result);
-    } catch (err) {
-      console.error("Error en el registro:", err);
-    }
-  };
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password
+      })
+    });
 
-  const triggerShake = () => {
-    setShake(true);
-    setTimeout(() => setShake(false), 500);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Error al registrar usuario");
+    }
+
+    router.push("/dashboard/login");
+  } catch (error: any) {
+      setError(error.message || "Error al procesar el registro");
+      triggerShake();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!mounted) {
@@ -259,10 +229,10 @@ export default function RegisterForm() {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg disabled:opacity-70"
               >
-                {loading ? "Registrando..." : "Registrarse"}
+                {isLoading ? "Registrando..." : "Registrarse"}
               </Button>
             </form>
           </CardContent>
