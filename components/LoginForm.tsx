@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { CheckSquare, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { setCookie } from "@/lib/utils";
+
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({

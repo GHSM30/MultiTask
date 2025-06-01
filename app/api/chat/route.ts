@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server';
 
 // Modelos de Hugging Face (pueden cambiar según disponibilidad)
 const FREE_MODEL = "OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5";
@@ -18,21 +18,16 @@ interface DetectedAction {
   category?: string;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Solo aceptamos solicitudes POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método no permitido' });
-  }
-
+export async function POST(request: Request) {
   try {
-    const { message, context = [] } = req.body;
+    const { message, context = [] } = await request.json();
     
     // Validamos el mensaje recibido
     if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'Mensaje no válido' });
+      return NextResponse.json(
+        { error: 'Mensaje no válido' },
+        { status: 400 }
+      );
     }
 
     // Detección mejorada de la acción
@@ -67,16 +62,17 @@ export default async function handler(
     response = enhanceResponse(response, action.type, action);
     
     // Devolvemos la respuesta
-    return res.status(200).json({ 
+    return NextResponse.json({ 
       content: response,
       detectedAction: action
     });
 
   } catch (error) {
     console.error('Error en la API de chat:', error);
-    return res.status(200).json({ 
-      content: 'Actualmente estoy teniendo dificultades técnicas. Por favor, intenta nuevamente más tarde o usa comandos más específicos para gestionar tus tareas.'
-    });
+    return NextResponse.json(
+      { content: 'Actualmente estoy teniendo dificultades técnicas. Por favor, intenta nuevamente más tarde o usa comandos más específicos para gestionar tus tareas.' },
+      { status: 200 }
+    );
   }
 }
 
@@ -171,7 +167,6 @@ ${examples}
             return_full_text: false
           }
         }),
-        // Timeout para evitar que la solicitud se quede colgada
         signal: AbortSignal.timeout(5000)
       }
     );
@@ -193,26 +188,20 @@ ${examples}
 function detectEnhancedTaskAction(message: string, context: string[] = []): DetectedAction {
   const lowerMsg = message.toLowerCase();
   
-  // Extraemos el nombre de la tarea (texto entre comillas o después de ciertas palabras clave)
   const taskNameMatch = message.match(/(?:^|["“'])([^"“']+)["”']|(?:tarea|recordatorio|reunión|llamar|hacer)\s+([^.,;!?]+)/i);
   const taskName = taskNameMatch ? (taskNameMatch[1] || taskNameMatch[2]).trim() : undefined;
   
-  // Detección de fecha (versión simple)
   const dateMatch = message.match(/(\d{1,2}\s+(?:de\s+)?[a-z]+\s*(?:de\s+\d{4})?|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|mañana|pasado mañana|lunes|martes|miércoles|jueves|viernes|sábado|domingo|próxima semana|fin de semana)/i);
   const date = dateMatch ? dateMatch[0] : undefined;
   
-  // Detección de prioridad
   const priorityMatch = lowerMsg.match(/(Alta|Media|Baja|crítica|importante|urgente|prioritaria)/i);
   const priority = priorityMatch ? priorityMatch[0] : undefined;
   
-  // Detección de categoría
   const categoryMatch = message.match(/(?:categoría|etiqueta|área)\s*(?:de\s+)?["']?([^"'\.,;!?]+)/i);
   const category = categoryMatch ? categoryMatch[1].trim() : undefined;
   
-  // Verificamos el contexto para acciones previas
   const lastAction = context.length > 0 ? context[context.length - 1].toLowerCase() : '';
   
-  // Detección mejorada con contexto
   if (/(crear|nueva|agregar|añadir|necesito|quiero)\s+(?:tarea|recordatorio|reunión|llamar|hacer)/i.test(lowerMsg) ||
       (lastAction.includes('crear') && /sí|si|ok|vale|correcto/i.test(lowerMsg))) {
     return { 
@@ -289,7 +278,6 @@ function detectEnhancedTaskAction(message: string, context: string[] = []): Dete
     };
   }
   
-  // Casos especiales basados en contexto
   if (context.length > 0) {
     if (lastAction.includes('listar') && /más|siguiente|otras/i.test(lowerMsg)) {
       return { type: 'list' };
@@ -420,15 +408,13 @@ Puedes decir "ayuda" para ver todo lo que puedo hacer.`;
 function isGibberish(text: string): boolean {
   if (!text) return true;
   
-  // Verificamos si el texto es muy corto
   if (text.trim().length < 3) return true;
   
-  // Patrones que indican texto sin sentido
   const gibberishPatterns = [
-    /^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+$/, // Solo caracteres especiales
-    /(.)\1{4,}/, // Caracteres repetidos
-    /[xq]{5,}/i, // Repeticiones inusuales
-    /^[^a-z]*$/i // Sin letras
+    /^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+$/,
+    /(.)\1{4,}/,
+    /[xq]{5,}/i,
+    /^[^a-z]*$/i
   ];
   
   return gibberishPatterns.some(pattern => pattern.test(text));
@@ -438,17 +424,14 @@ function isGibberish(text: string): boolean {
 function enhanceResponse(response: string, action: TaskAction, details?: DetectedAction): string {
   let enhanced = response.trim();
   
-  // Capitalizamos la primera letra
   if (enhanced.length > 0) {
     enhanced = enhanced.charAt(0).toUpperCase() + enhanced.slice(1);
   }
   
-  // Añadimos puntuación si falta
   if (!/[.!?]$/.test(enhanced)) {
     enhanced += '.';
   }
   
-  // Mejoras específicas por tipo de acción
   switch(action) {
     case 'create':
       if (!enhanced.includes('¿') && !enhanced.includes('?')) {
@@ -479,8 +462,7 @@ function enhanceResponse(response: string, action: TaskAction, details?: Detecte
       break;
   }
   
-  // Aseguramos un tono educado
-  if (!enhanced.startsWith('¡') && !enhanced.startsWith('Por favor') && 
+  if (!enhanced.startsWith('¡') && !enhanced.startsWith('Por please') && 
       !enhanced.includes('gracias') && !enhanced.includes('puedes')) {
     if (action !== 'unknown') {
       enhanced = enhanced.replace('.', ', por favor.');

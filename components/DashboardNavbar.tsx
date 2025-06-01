@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, LogOut } from "lucide-react";
-import { getCookie } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 export default function DashboardNavbar() {
@@ -14,13 +13,13 @@ export default function DashboardNavbar() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = getCookie("token");
+        const token = localStorage.getItem("authToken");
         if (!token) {
-          router.push("/");
+          router.push("/dashboard/login");
           return;
         }
 
-        const response = await fetch('/api/auth/user', {
+        const response = await fetch('/api/user', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -34,18 +33,20 @@ export default function DashboardNavbar() {
         setUserName(`${userData.firstName} ${userData.lastName}`);
       } catch (error) {
         console.error("Error fetching user data:", error);
-        setUserName("Usuario");
+        localStorage.removeItem("authToken");
+        router.push("/dashboard/login");
       }
     };
 
     fetchUserData();
   }, [router]);
 
-  const handleLogout = async () => {
-    // Eliminar la cookie
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    router.push("/login");
-  };
+ const handleLogout = () => {
+  // Eliminar el token de localStorage
+  localStorage.removeItem('authToken');
+  // Redirigir al login
+  router.push('/');
+};
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">

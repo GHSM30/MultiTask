@@ -98,7 +98,7 @@ export default function RegisterForm() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || "Error al registrar usuario");
+      throw new Error(data.message || "Error al registrar El usuario Ya Existe");
     }
 
     router.push("/dashboard/login");
