@@ -22,7 +22,7 @@ import {
 import { Card } from "@/components/ui/card";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import DashboardFooter from "@/components/DashboardFooter";
-import { format} from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 //import AuthGuard from '@/components/AuthGuard'
 
@@ -80,9 +80,9 @@ export default function TaskArea() {
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const generateUniqueId = () =>
-    `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
+  const generateUniqueId = () => {
+    return crypto.randomUUID(); // Método moderno y más confiable
+  };
   const fetchTasks = async () => {
     const token = localStorage.getItem("authToken");
     if (!token) return [];
@@ -105,8 +105,17 @@ export default function TaskArea() {
     }
   };
 
+  const isTaskNameUnique = (title: string, currentTaskId?: string) => {
+  return !tasks.some(
+    (task) => 
+      task.title.toLowerCase() === title.toLowerCase() &&
+      task.id !== currentTaskId // Ignora la tarea actual si se está editando
+  );
+};
+
   const saveTaskToServer = async (task: Partial<Task>) => {
     const token = localStorage.getItem("authToken");
+
     if (!token) return null;
 
     try {
@@ -128,8 +137,7 @@ export default function TaskArea() {
 
   const updateTaskOnServer = async (taskId: string, updates: Partial<Task>) => {
     const token = localStorage.getItem("authToken");
-    console.log("Token:", token); // Debug
-    console.log("Enviando:", { taskId, updates }); // Debug
+    if (!token) return null;
 
     try {
       const response = await fetch("/api/tasks", {
@@ -141,17 +149,22 @@ export default function TaskArea() {
         body: JSON.stringify({ taskId, ...updates }),
       });
 
-      console.log("Respuesta:", response); // Debug
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error en respuesta:", errorText); // Debug
-        throw new Error(errorText);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al actualizar la tarea");
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Error en updateTaskOnServer:", error); // Debug
+      console.error("Error en updateTaskOnServer:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateUniqueId(),
+          content: "⚠️ La tarea no existe o no se pudo actualizar",
+          role: "assistant",
+        },
+      ]);
       return null;
     }
   };
@@ -169,13 +182,26 @@ export default function TaskArea() {
         },
         body: JSON.stringify({ taskId }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al eliminar la tarea");
+      }
+
       return response.ok;
     } catch (error) {
       console.error("Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateUniqueId(),
+          content: "⚠️ La tarea no existe o no se pudo eliminar",
+          role: "assistant",
+        },
+      ]);
       return false;
     }
   };
-
   const handleStatusChange = async (
     taskId: string,
     newStatus: Task["status"]
@@ -210,22 +236,21 @@ export default function TaskArea() {
   };
 
   // Función para editar una tarea
-  const handleEditTask = (taskId: string) => {
-    const taskToEdit = tasks.find((task) => task.id === taskId);
-    if (taskToEdit) {
-      setNewTask({
-        title: taskToEdit.title,
-        description: taskToEdit.description,
-        priority: taskToEdit.priority,
-        dueDate: taskToEdit.dueDate,
-      });
-     
-      setIsCreatingTask(true);
-    }
-  };
-
-  
-
+ const handleEditTask = (taskId: string) => {
+  const taskToEdit = tasks.find((task) => task.id === taskId);
+  if (taskToEdit) {
+    setNewTask({
+      id: taskToEdit.id,
+      title: taskToEdit.title, // Título no editable
+      description: taskToEdit.description,
+      priority: taskToEdit.priority,
+      dueDate: taskToEdit.dueDate,
+      status: taskToEdit.status, // Mantener estado actual
+      createdAt: taskToEdit.createdAt, // Mantener fecha original
+    });
+    setIsCreatingTask(true);
+  }
+};
   // Función mejorada para manejar mensajes
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -287,10 +312,11 @@ export default function TaskArea() {
         const { title, priority, dueDate } = parseTaskCommand(input);
 
         if (!title) {
-          response =
-            "Por favor especifica el nombre de la tarea. Ejemplo: 'Crear tarea Proyecto final con prioridad alta para el 30 de mayo'";
+          response = "Por favor especifica el nombre de la tarea.";
+        } else if (!isTaskNameUnique(title)) {
+          response = `⚠️ Ya existe una tarea llamada "${title}". Usa un nombre diferente.`;
         } else {
-          const newTaskData : Partial<Task>= {
+          const newTaskData: Partial<Task> = {
             title,
             description: `Tarea creada desde el chat: ${input}`,
             priority: priority || "Media",
@@ -596,50 +622,81 @@ export default function TaskArea() {
   };
 
   const startManualTaskCreation = () => {
-    setIsCreatingTask(true);
-    setNewTask({
-      title: "",
-      priority: "Media",
-      status: "todo",
-      dueDate: undefined,
-    });
+  setIsCreatingTask(true);
+  setNewTask({
+    title: "",
+    description: "",
+    priority: "Media",
+    status: "todo",
+    dueDate: undefined,
+  });
+};
+
+ const saveManualTask = async () => {
+  if (!newTask.title?.trim()) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: generateUniqueId(),
+        content: "⚠️ El título de la tarea no puede estar vacío",
+        role: "assistant",
+      },
+    ]);
+    return;
+  }
+
+  // Solo validar nombres duplicados para nuevas tareas
+  if (!newTask.id && !isTaskNameUnique(newTask.title)) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: generateUniqueId(),
+        content: `⚠️ Ya existe una tarea con el nombre "${newTask.title}". Usa un nombre diferente.`,
+        role: "assistant",
+      },
+    ]);
+    return;
+  }
+
+  const taskToSave = {
+    ...newTask,
+    createdAt: newTask.createdAt || new Date(), // Mantener fecha existente o crear nueva
   };
 
-  const saveManualTask = async () => {
-    if (!newTask.title?.trim()) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: generateUniqueId(), // Usar generateUniqueId aquí
-          content: "⚠️ Por favor ingresa un título para la tarea",
-          role: "assistant",
-        },
-      ]);
-      return;
-    }
-
-    const taskToSave = {
-      ...newTask,
-      id: generateUniqueId(), // ID único para la nueva tarea
-      createdAt: new Date(),
-    };
-
-    const savedTask = await saveTaskToServer(taskToSave);
+  try {
+    const savedTask = newTask.id
+      ? await updateTaskOnServer(newTask.id, taskToSave)
+      : await saveTaskToServer(taskToSave);
 
     if (savedTask) {
-      setTasks((prev) => [...prev, savedTask]);
+      setTasks((prev) =>
+        newTask.id
+          ? prev.map((t) => (t.id === newTask.id ? savedTask : t))
+          : [...prev, savedTask]
+      );
       setMessages((prev) => [
         ...prev,
         {
-          id: generateUniqueId(), // ID único para el mensaje
-          content: `✅ Tarea "${savedTask.title}" creada`,
+          id: generateUniqueId(),
+          content: `✅ Tarea "${savedTask.title}" ${newTask.id ? "actualizada" : "creada"}`,
           role: "assistant",
-          taskData: savedTask,
         },
       ]);
       setIsCreatingTask(false);
+      setNewTask({ title: "", priority: "Media", status: "todo" }); // Resetear formulario
     }
-  };
+  } catch (error) {
+    console.error("Error al guardar tarea:", error);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: generateUniqueId(),
+        content: "⚠️ Error al guardar la tarea. Intenta nuevamente.",
+        role: "assistant",
+      },
+    ]);
+  }
+};
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -659,7 +716,7 @@ export default function TaskArea() {
     };
 
     loadData();
-  }, [router ]);
+  }, [router]);
 
   // Auto-scroll
   /*
@@ -673,19 +730,19 @@ export default function TaskArea() {
 
   // Ordenar tareas por prioridad y fecha
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-  const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
-  
-  // Primero ordenar por prioridad
-  if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-    return priorityOrder[a.priority] - priorityOrder[b.priority];
-  }
-  
-  // Luego ordenar por fecha (manejando casos donde dueDate puede ser undefined)
-  const dateA = a.dueDate instanceof Date ? a.dueDate.getTime() : 0;
-  const dateB = b.dueDate instanceof Date ? b.dueDate.getTime() : 0;
-  
-  return dateA - dateB;
-});
+    const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
+
+    // Primero ordenar por prioridad
+    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    }
+
+    // Luego ordenar por fecha (manejando casos donde dueDate puede ser undefined)
+    const dateA = a.dueDate instanceof Date ? a.dueDate.getTime() : 0;
+    const dateB = b.dueDate instanceof Date ? b.dueDate.getTime() : 0;
+
+    return dateA - dateB;
+  });
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -766,7 +823,7 @@ export default function TaskArea() {
               {sortedTasks.length > 0 ? (
                 sortedTasks.map((task) => (
                   <Card
-                    key={task.id}
+                    key={task.id || crypto.randomUUID()} // Si task.id es undefined, genera uno nuevo
                     className={`p-4 hover:shadow-md transition-shadow group ${
                       task.dueDate &&
                       task.dueDate < new Date() &&
@@ -975,7 +1032,7 @@ export default function TaskArea() {
             >
               {messages.map((message) => (
                 <div
-                  key={message.id}
+                  key={message.id || crypto.randomUUID()} // Si message.id es undefined, genera uno nuevo
                   className={`flex ${
                     message.role === "user" ? "justify-end" : "justify-start"
                   }`}
@@ -1039,72 +1096,72 @@ export default function TaskArea() {
             </div>
 
             <div className="p-4 border-t border-gray-200">
-              {isCreatingTask ? (
-                <div className="space-y-3">
-                  <input
-                    placeholder="Título de la tarea"
-                    value={newTask.title || ""}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, title: e.target.value })
-                    }
-                    className="w-full border rounded-lg p-2 text-sm"
-                  />
-                  <input
-                    placeholder="Descripción (opcional)"
-                    value={newTask.description || ""}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, description: e.target.value })
-                    }
-                    className="w-full border rounded-lg p-2 text-sm"
-                  />
-                  <select
-                    value={newTask.priority}
-                    onChange={(e) =>
-                      setNewTask({
-                        ...newTask,
-                        priority: e.target.value as "Baja" | "Media" | "Alta",
-                      })
-                    }
-                    className="w-full border rounded-lg p-2 text-sm"
-                  >
-                    <option value="Baja">Baja prioridad</option>
-                    <option value="Media">Media prioridad</option>
-                    <option value="Alta">Alta prioridad</option>
-                  </select>
-                  <input
-                    type="date"
-                    value={
-                      newTask.dueDate
-                        ? format(newTask.dueDate, "yyyy-MM-dd")
-                        : ""
-                    }
-                    onChange={(e) =>
-                      setNewTask({
-                        ...newTask,
-                        dueDate: e.target.value
-                          ? new Date(e.target.value)
-                          : undefined,
-                      })
-                    }
-                    className="w-full border rounded-lg p-2 text-sm"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setIsCreatingTask(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                      onClick={saveManualTask}
-                      disabled={!newTask.title}
-                    >
-                      Guardar Tarea
-                    </Button>
-                  </div>
-                </div>
+             {isCreatingTask && (
+  <div className="space-y-3">
+    {/* Campo de título - solo lectura si es edición */}
+    <div className="relative">
+      <input
+        placeholder="Título de la tarea"
+        value={newTask.title || ""}
+        onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+        className="w-full border rounded-lg p-2 text-sm"
+        readOnly={!!newTask.id} // Deshabilitado si es una edición
+      />
+      {newTask.id && (
+        <div className="absolute inset-0 bg-gray-100 opacity-50 rounded-lg cursor-not-allowed"></div>
+      )}
+    </div>
+
+    {/* Resto de campos (siempre editables) */}
+    <input
+      placeholder="Descripción (opcional)"
+      value={newTask.description || ""}
+      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+      className="w-full border rounded-lg p-2 text-sm"
+    />
+    <select
+      value={newTask.priority}
+      onChange={(e) =>
+        setNewTask({
+          ...newTask,
+          priority: e.target.value as "Baja" | "Media" | "Alta",
+        })
+      }
+      className="w-full border rounded-lg p-2 text-sm"
+    >
+      <option value="Baja">Baja prioridad</option>
+      <option value="Media">Media prioridad</option>
+      <option value="Alta">Alta prioridad</option>
+    </select>
+    <input
+      type="date"
+      value={newTask.dueDate ? format(newTask.dueDate, "yyyy-MM-dd") : ""}
+      onChange={(e) =>
+        setNewTask({
+          ...newTask,
+          dueDate: e.target.value ? new Date(e.target.value) : undefined,
+        })
+      }
+      className="w-full border rounded-lg p-2 text-sm"
+    />
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        className="flex-1"
+        onClick={() => setIsCreatingTask(false)}
+      >
+        Cancelar
+      </Button>
+      <Button
+        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+        onClick={saveManualTask}
+        disabled={!newTask.title}
+      >
+        {newTask.id ? "Actualizar Tarea" : "Guardar Tarea"}
+      </Button>
+    </div>
+  </div>
+)}
               ) : (
                 <>
                   <div className="relative">
@@ -1151,7 +1208,7 @@ export default function TaskArea() {
                     </Button>
                   </div>
                 </>
-              )}
+              )
             </div>
           </motion.div>
         </div>
