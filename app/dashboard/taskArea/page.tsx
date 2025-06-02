@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Sparkles,
   Bot,
   ListChecks,
   Send,
@@ -13,7 +12,6 @@ import {
   User,
   Calendar,
   Flag,
-  ChevronDown,
   Plus,
   Check,
   Edit,
@@ -24,7 +22,7 @@ import {
 import { Card } from "@/components/ui/card";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import DashboardFooter from "@/components/DashboardFooter";
-import { format, parseISO } from "date-fns";
+import { format} from "date-fns";
 import { es } from "date-fns/locale";
 //import AuthGuard from '@/components/AuthGuard'
 
@@ -81,7 +79,6 @@ export default function TaskArea() {
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const generateUniqueId = () =>
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -226,45 +223,7 @@ export default function TaskArea() {
     }
   };
 
-  // Función para guardar los cambios al editar
-  const saveEditedTask = async () => {
-    if (!newTask.title?.trim() || !editingTaskId) return;
-
-    const updatedTask = await updateTaskOnServer(editingTaskId, {
-      title: newTask.title || "",
-      description: newTask.description,
-      priority: newTask.priority || "Media",
-      dueDate: newTask.dueDate,
-    });
-
-    if (updatedTask) {
-      setTasks((prevTasks) =>
-        prevTasks.map((task) =>
-          task.id === editingTaskId
-            ? {
-                ...task,
-                title: newTask.title || "",
-                description: newTask.description,
-                priority: newTask.priority || "Media",
-                dueDate: newTask.dueDate,
-              }
-            : task
-        )
-      );
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          content: `✅ Tarea "${newTask.title}" actualizada`,
-          role: "assistant",
-        },
-      ]);
-
-      setIsCreatingTask(false);
-      setEditingTaskId(null);
-    }
-  };
+  
 
   // Función mejorada para manejar mensajes
   const handleSendMessage = async () => {
@@ -692,16 +651,14 @@ export default function TaskArea() {
       try {
         const tasks = await fetchTasks();
         setTasks(tasks);
-        setIsAuthenticated(true);
       } catch {
         localStorage.removeItem("authToken");
-        setIsAuthenticated(false);
         router.push("/dashboard/login");
       }
     };
 
     loadData();
-  }, [router , setIsAuthenticated]);
+  }, [router ]);
 
   // Auto-scroll
   /*
