@@ -28,6 +28,7 @@ import { es } from "date-fns/locale";
 
 type Task = {
   id: string;
+  _id?: string; // Para compatibilidad con MongoDB
   title: string;
   description?: string;
   dueDate?: Date;
@@ -218,7 +219,7 @@ export default function TaskArea() {
         priority: taskToEdit.priority,
         dueDate: taskToEdit.dueDate,
       });
-      setEditingTaskId(taskId);
+     
       setIsCreatingTask(true);
     }
   };

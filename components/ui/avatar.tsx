@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
+import Image, { ImageProps } from "next/image";
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;
+  className?: string;
 }
 
 const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
@@ -22,36 +23,43 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
 );
 Avatar.displayName = "Avatar";
 
-interface AvatarImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
-  alt: string; // Hacer obligatorio el atributo alt
+interface AvatarImageProps extends Omit<ImageProps, 'alt'> {
+  alt: string;
+  className?: string;
 }
 
 const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
   ({ className = "", alt, ...props }, ref) => (
-    <Image
-      ref={ref}
-      className={`aspect-square h-full w-full ${className}`}
-      alt={alt}
-      {...props}
-      width={40} // Tamaño recomendado para avatares
-      height={40}
-    />
+    <div className={`aspect-square h-full w-full ${className}`}>
+      <Image
+        ref={ref}
+        alt={alt}
+        {...props}
+        width={40}
+        height={40}
+        className="h-full w-full object-cover"
+      />
+    </div>
   )
 );
 AvatarImage.displayName = "AvatarImage";
 
-const AvatarFallback = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className = "", children, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={`flex h-full w-full items-center justify-center rounded-full bg-gray-100 ${className}`}
-    {...props}
-  >
-    {children}
-  </div>
-));
+interface AvatarFallbackProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: React.ReactNode;
+  className?: string;
+}
+
+const AvatarFallback = React.forwardRef<HTMLDivElement, AvatarFallbackProps>(
+  ({ className = "", children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={`flex h-full w-full items-center justify-center rounded-full bg-gray-100 ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+);
 AvatarFallback.displayName = "AvatarFallback";
 
 export { Avatar, AvatarImage, AvatarFallback };
