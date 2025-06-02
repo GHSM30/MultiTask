@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { User } from '@/models/User';
 import connectDB from '@/lib/dbConnect';
 
+
+
 export async function GET(request: Request) {
   await connectDB();
   
@@ -91,7 +93,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Tarea no encontrada' }, { status: 404 });
     }
 
-    const updatedTask = user.tasks.find(task => task._id.toString() === taskId);
+    const updatedTask = user.tasks.find((task: { _id: { toString: () => string } }) => 
+  task._id.toString() === taskId
+);
     return NextResponse.json(updatedTask);
   } catch (error) {
     console.error(error);

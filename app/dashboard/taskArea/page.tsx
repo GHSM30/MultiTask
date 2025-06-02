@@ -839,7 +839,7 @@ export default function TaskArea() {
                           {/* Botón Eliminar */}
                           <div className="relative group/tooltip">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               className="h-9 w-9 p-0 text-red-600 hover:text-red-800"
                               onClick={() => handleDeleteTask(task.id)}
@@ -856,7 +856,7 @@ export default function TaskArea() {
                             // Botón Reabrir
                             <div className="relative group/tooltip">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 className="h-9 w-9 p-0"
                                 onClick={() =>
@@ -874,7 +874,7 @@ export default function TaskArea() {
                             // Botón Completar
                             <div className="relative group/tooltip">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 className="h-9 w-9 p-0"
                                 onClick={() =>
@@ -893,7 +893,7 @@ export default function TaskArea() {
                               {/* Botón Mover a En Progreso */}
                               <div className="relative group/tooltip">
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
                                   className="h-9 w-9 p-0"
                                   onClick={() =>
@@ -910,7 +910,7 @@ export default function TaskArea() {
                               {/* Botón Completar */}
                               <div className="relative group/tooltip">
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
                                   className="h-9 w-9 p-0"
                                   onClick={() =>

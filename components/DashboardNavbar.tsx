@@ -63,7 +63,7 @@ export default function DashboardNavbar() {
                 <span className="text-sm font-medium">{userName}</span>
               </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleLogout}
                 className="text-gray-600 hover:text-red-600"

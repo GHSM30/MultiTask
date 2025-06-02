@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({
       success: false,
       message: "Error conectando a MongoDB",
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }
 }
