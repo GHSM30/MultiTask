@@ -673,15 +673,19 @@ export default function TaskArea() {
 
   // Ordenar tareas por prioridad y fecha
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
-    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
-    }
-    if (a.dueDate && b.dueDate) {
-      return a.dueDate.getTime() - b.dueDate.getTime();
-    }
-    return 0;
-  });
+  const priorityOrder = { Alta: 1, Media: 2, Baja: 3 };
+  
+  // Primero ordenar por prioridad
+  if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
+  }
+  
+  // Luego ordenar por fecha (manejando casos donde dueDate puede ser undefined)
+  const dateA = a.dueDate instanceof Date ? a.dueDate.getTime() : 0;
+  const dateB = b.dueDate instanceof Date ? b.dueDate.getTime() : 0;
+  
+  return dateA - dateB;
+});
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
