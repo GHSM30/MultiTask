@@ -79,7 +79,7 @@ export default function TaskArea() {
     priority: "Media",
     status: "todo",
   });
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const generateUniqueId = () =>
@@ -97,7 +97,7 @@ export default function TaskArea() {
       });
       if (!response.ok) throw new Error("Error al obtener tareas");
       const data = await response.json();
-      return data.map((task: any) => ({
+      return data.map((task: Task) => ({
         ...task,
         id: task._id || task.id, // Mapea _id a id
       }));
@@ -330,7 +330,7 @@ export default function TaskArea() {
           response =
             "Por favor especifica el nombre de la tarea. Ejemplo: 'Crear tarea Proyecto final con prioridad alta para el 30 de mayo'";
         } else {
-          const newTaskData = {
+          const newTaskData : Partial<Task>= {
             title,
             description: `Tarea creada desde el chat: ${input}`,
             priority: priority || "Media",
@@ -492,7 +492,7 @@ export default function TaskArea() {
     } catch (error) {
       console.error("Error:", error);
       const errorMessage: Message = {
-        id: generateId(),
+        id: generateUniqueId(),
         content:
           "⚠️ Lo siento, ocurrió un error. Por favor intenta de nuevo o usa comandos más específicos.",
         role: "assistant",
@@ -571,7 +571,7 @@ export default function TaskArea() {
       if (dueDate && isNaN(dueDate.getTime())) {
         dueDate = undefined;
       }
-    } catch (e) {
+    } catch {
       dueDate = undefined;
     }
 
@@ -591,7 +591,7 @@ export default function TaskArea() {
       const match = text.match(pattern);
       if (match) {
         try {
-          let dateStr = match[0].replace(/(?:para|el|hasta)\s+/i, "");
+          const dateStr = match[0].replace(/(?:para|el|hasta)\s+/i, "");
 
           if (dateStr === "mañana") {
             const tomorrow = new Date();
@@ -617,7 +617,7 @@ export default function TaskArea() {
           }
 
           return new Date(dateStr);
-        } catch (e) {
+        } catch {
           continue;
         }
       }
@@ -693,7 +693,7 @@ export default function TaskArea() {
         const tasks = await fetchTasks();
         setTasks(tasks);
         setIsAuthenticated(true);
-      } catch (error) {
+      } catch {
         localStorage.removeItem("authToken");
         setIsAuthenticated(false);
         router.push("/dashboard/login");
@@ -701,7 +701,7 @@ export default function TaskArea() {
     };
 
     loadData();
-  }, [router]);
+  }, [router , setIsAuthenticated]);
 
   // Auto-scroll
   /*
@@ -865,7 +865,7 @@ export default function TaskArea() {
                           {/* Botón Editar */}
                           <div className="relative group/tooltip">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               className="h-9 w-9 p-0"
                               onClick={() => handleEditTask(task.id)}
@@ -980,7 +980,7 @@ export default function TaskArea() {
                     {activeTab !== "all" ? "en esta categoría" : "aún"}.
                   </p>
                   <Button
-                    variant="link"
+                    variant="outline"
                     className="text-emerald-600 mt-2"
                     onClick={startManualTaskCreation}
                   >

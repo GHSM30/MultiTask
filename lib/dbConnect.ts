@@ -8,6 +8,7 @@ interface MongooseCache {
 
 // 2. Extiende la interfaz global con tipos más específicos
 declare global {
+  // eslint-disable-next-line no-var
   var mongoose: MongooseCache;
 }
 
@@ -20,8 +21,8 @@ if (!MONGODB_URI) {
   );
 }
 
-// 4. Inicialización del caché con tipos explícitos
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
+// 4. Inicialización del caché con tipos explícitos (usando const ya que no se reasigna)
+const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
 /**
  * Conexión global a MongoDB con manejo mejorado de tipos y errores

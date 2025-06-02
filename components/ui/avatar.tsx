@@ -30,7 +30,7 @@ const AvatarImage = React.forwardRef<
     className="aspect-square h-full w-full"
     {...props}
   />
-);
+));
 AvatarImage.displayName = "AvatarImage";
 
 const AvatarFallback = React.forwardRef<
@@ -44,7 +44,7 @@ const AvatarFallback = React.forwardRef<
   >
     {children}
   </div>
-);
+));
 AvatarFallback.displayName = "AvatarFallback";
 
 export { Avatar, AvatarImage, AvatarFallback };

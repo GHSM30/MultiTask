@@ -23,6 +23,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(user.tasks);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Error al obtener tareas' }, { status: 500 });
   }
 }
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     const newTask = user.tasks[user.tasks.length - 1];
     return NextResponse.json(newTask, { status: 201 });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Error al crear tarea' }, { status: 500 });
   }
 }
@@ -92,6 +94,7 @@ export async function PUT(request: Request) {
     const updatedTask = user.tasks.find(task => task._id.toString() === taskId);
     return NextResponse.json(updatedTask);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Error al actualizar tarea' }, { status: 500 });
   }
 }
@@ -122,6 +125,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Error al eliminar tarea' }, { status: 500 });
   }
 }

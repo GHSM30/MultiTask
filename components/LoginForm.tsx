@@ -7,8 +7,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { motion } from "framer-motion";
 import { CheckSquare, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -18,7 +16,6 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -32,50 +29,56 @@ export default function LoginForm() {
     setShowPassword(!showPassword);
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
-  if (!formData.email || !formData.password) {
-    setError("Por favor completa todos los campos");
-    setIsLoading(false);
-    return;
-  }
+    if (!formData.email || !formData.password) {
+      setError("Por favor completa todos los campos");
+      setIsLoading(false);
+      return;
+    }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) {
-    setError("Por favor ingresa un correo electrónico válido");
-    setIsLoading(false);
-    return;
-  }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Por favor ingresa un correo electrónico válido");
+      setIsLoading(false);
+      return;
+    }
 
-  try {
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: formData.email,
-        password: formData.password
-      })
-    });
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
+      if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
 
-    // Guardar el token en localStorage
-    localStorage.setItem('authToken', data.token);
-    
-    // Redirigir al dashboard
-    window.location.href = '/dashboard/taskArea';
-    
-  } catch (error: any) {
-    setError(error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Guardar el token en localStorage
+      localStorage.setItem('authToken', data.token);
+      
+      // Redirigir al dashboard
+      window.location.href = '/dashboard/taskArea';
+      
+    } catch (error: unknown) { // Cambiado de any a unknown
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Ocurrió un error desconocido');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ... (resto del c
 
   const multiTaskIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12">

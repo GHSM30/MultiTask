@@ -102,8 +102,12 @@ export default function RegisterForm() {
     }
 
     router.push("/dashboard/login");
-  } catch (error: any) {
-      setError(error.message || "Error al procesar el registro");
+  }  catch (error: unknown) {  // Cambiado de any a unknown
+      if (error instanceof Error) {
+        setError(error.message || "Error al procesar el registro");
+      } else {
+        setError("Error desconocido al procesar el registro");
+      }
       triggerShake();
     } finally {
       setIsLoading(false);

@@ -1,12 +1,7 @@
-import { Geist } from 'next/font/google';
 import "./globals.css";
-import Providers from './providers'; // Cambiado a importación por defecto
+import Providers from './providers';
 import Head from 'next/head';
 
-const geist = Geist({
-  subsets: ['latin'],
-  preload: false
-});
 
 export default function RootLayout({
   children,
