@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const user = await User.findOne({ email });
     if (!user) {
       return NextResponse.json(
-        { error: 'Credenciales inválidas' },
+        { error: 'El usuario no existe' },
         { status: 401 }
       );
     }

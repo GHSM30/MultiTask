@@ -30,54 +30,58 @@ export default function LoginForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
 
-    if (!formData.email || !formData.password) {
-      setError("Por favor completa todos los campos");
-      setIsLoading(false);
-      return;
-    }
+  if (!formData.email || !formData.password) {
+    setError("Por favor completa todos los campos");
+    setIsLoading(false);
+    return;
+  }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError("Por favor ingresa un correo electrónico válido");
-      setIsLoading(false);
-      return;
-    }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    setError("Por favor ingresa un correo electrónico válido");
+    setIsLoading(false);
+    return;
+  }
 
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password
+      })
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
+    if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
 
-      // Guardar el token en localStorage
-      localStorage.setItem('authToken', data.token);
-      
-      // Redirigir al dashboard
+    // Guardar el token en localStorage
+    localStorage.setItem('authToken', data.token);
+    
+    // Redirigir al admin si el email es admin@admin.com
+    if (formData.email === 'admin@admin.com') {
+      window.location.href = '/dashboard/admin';
+    } else {
+      // Redirigir al dashboard normal
       window.location.href = '/dashboard/taskArea';
-      
-    } catch (error: unknown) { // Cambiado de any a unknown
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('Ocurrió un error desconocido');
-      }
-    } finally {
-      setIsLoading(false);
     }
-  };
-
+    
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      setError(error.message);
+    } else {
+      setError('Ocurrió un error desconocido');
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
   const multiTaskIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12">
       <motion.path
